@@ -35,3 +35,4 @@ func (q *Queue) HasValue(v string) (bool) {
 	}
 	return false
 }
+
