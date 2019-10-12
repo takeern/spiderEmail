@@ -1,12 +1,21 @@
 package dao
 
 import (
+	"log"
 	"context"
+	"net/http"
+	"io/ioutil"
+	"crypto/tls"
 	"spider/interval/conf"
 	pb "spider/interval/serve/grpc"
 )
 
 type Server struct{}
+
+func init() {
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	registerIp(0)
+}
 
 
 func (s *Server) HandleTask(ctx context.Context, req *pb.HandleTaskReq) (*pb.HandleTaskResp, error) {
@@ -53,5 +62,29 @@ func selectTaskRun(req *pb.HandleTaskReq, resp *pb.HandleTaskResp) (*pb.HandleTa
 		resp.Code = 10003
 		resp.ErrorMsg = "unhandle task code"
 		return resp
+	}
+}
+
+func registerIp(times int) {
+	if (times > conf.RETRY_REGISTER_TIMES) {
+		log.Fatal("register many time exit")
+	}
+	resp, err := http.Get(conf.MASTER_HOST + "?token=" + conf.MASTER_TOKEN)
+	if err != nil {
+		times ++
+		registerIp(times)
+		return
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		times ++
+		registerIp(times)
+		return
+	}
+	if (body[0] == 0) {
+		log.Println("register success")
+	} else {
+		log.Fatal("register res unhandle %v", body)
 	}
 }

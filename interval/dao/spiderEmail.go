@@ -30,11 +30,11 @@ func SpiderEmail(url string, times int) (error, []string, []string) {
 		return errors.New("too many try"), emails, urls
 	}
 	res, err := client.Get(url)
-	defer res.Body.Close()
 	if err != nil {
 		times ++
 		return SpiderEmail(url, times)
 	} else {
+		defer res.Body.Close()
 		Body, err := ioutil.ReadAll(res.Body)
 		html := string(Body)
 		emails = drawEmail(html)
