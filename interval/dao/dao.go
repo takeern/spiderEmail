@@ -51,6 +51,10 @@ func GetUrl(url string) {
 	fmt.Println(host_url)
 	nameIndex := strings.Replace(host_url, ".", "", -1)
 	mb = NewDb(nameIndex)
+	err := mb.CreateTable()
+	if err != nil {
+		Log.Warn("create table error", err)
+	}
 	parseHtml(url, 0)
 }
 
@@ -83,7 +87,6 @@ func parseHtml(url string, times int) {
 		parseHtml(url, times)
 		return
 	} else {
-		defer res.Body.Close()
 		Body, err := ioutil.ReadAll(res.Body)
 		if err != nil {
 			fmt.Println(err);

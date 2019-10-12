@@ -27,19 +27,17 @@ func SendMail(user, password, host, to, subject, body, mailtype string) error {
 }
 
 func userSend(ac, ps, host string) {
-	fmt.Println("send")
+	fmt.Println(ac, ps, host)
 	var modalIndex, rcIndex int
 	emLen := len(conf.EmailModalList)
 	rcLen := len(conf.RecieveList)
-	// ticker := time.NewTicker( conf.WAIT_SEND_EMAIL_TIME * time.Second)
-	// defer ticker.Stop()
+	
 	for {
-		fmt.Println("send")
-		if (modalIndex > emLen ) {
+		if (modalIndex > emLen - 1) {
 			modalIndex = 0
 		}
 
-		if (rcIndex > rcLen) {
+		if (rcIndex > rcLen - 1) {
 			rcIndex = 0
 		}
 
@@ -47,56 +45,24 @@ func userSend(ac, ps, host string) {
 		if err != nil { 
 			Log.Warn("send email error: ", err, ac, conf.RecieveList[rcIndex])
 		} else {
-			Log.Info("发送邮件成功", ac, conf.RecieveList[rcIndex])
+			Log.Info(ac, "发送邮件成功", conf.RecieveList[rcIndex], "邮件内容序号", modalIndex)
 		}
+		modalIndex ++
+		rcIndex ++
 		time.Sleep(conf.WAIT_SEND_EMAIL_TIME * time.Second)
 	}
-	if (modalIndex > emLen ) {
-		modalIndex = 0
-	}
-
-	if (rcIndex > rcLen) {
-		rcIndex = 0
-	}
-
-	err := SendMail(ac, ps, host, conf.RecieveList[rcIndex], "无主题", conf.EmailModalList[modalIndex], "html")
-	if err != nil { 
-		Log.Warn("send email error: ", err, ac, conf.RecieveList[rcIndex])
-	} else {
-		Log.Info("发送邮件成功", ac, conf.RecieveList[rcIndex])
-	}
-	time.Sleep(conf.WAIT_SEND_EMAIL_TIME * time.Second)
-	// for {
-	// 	select {
-	// 	//此处在等待channel中的信号，因此执行此段代码时会阻塞120秒
-	// 	case <-ticker.C:
-
-	// 		if (modalIndex > emLen ) {
-	// 			modalIndex = 0
-	// 		}
-
-	// 		if (rcIndex > rcLen) {
-	// 			rcIndex = 0
-	// 		}
-
-	// 		err := SendMail(ac, ps, host, conf.RecieveList[rcIndex], "无主题", conf.EmailModalList[modalIndex], "html")
-	// 		if err != nil { 
-	// 			Log.Warn("send email error: ", err, ac, conf.RecieveList[rcIndex])
-	// 		} else {
-	// 			Log.Info("发送邮件成功", ac, conf.RecieveList[rcIndex])
-	// 		}
-	// 	}
-	// }
 }
 
 func GoSend() {
 	var wg = sync.WaitGroup{}
 	wg.Add(len(conf.SendList))
 	for _, user := range conf.SendList {
-		go func () {
+		fmt.Println(user)
+		go func (user conf.SendInfo) {
+			fmt.Println(user)
 			userSend(user.Ac, user.Ps, user.Host)
 			wg.Done()
-		}()
+		}(user)
 	}
 	wg.Wait()
 }

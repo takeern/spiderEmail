@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package grpc;
+
+service Book {
+    rpc HandleTask (HandleTaskReq) returns (HandleTaskResp) {}
+}
+
+message HandleTaskReq {
+    int32 TaskCode = 1;
+    EmailInfo EmailInfo = 2;
+}
+
+message HandleTaskResp {
+    int32 Code = 1;
+    string ErrorMsg = 2;
+    SpiderInfo SpiderInfo = 3;
+}
+
+message EmailInfo {
+    string Ac = 1;
+    string Ps = 2;
+    string Host = 3;
+    string Receive = 4;
+    string ModalIndex = 5;
+}
+
+message SpiderInfo {
+    repeated string Urls = 1;
+    repeated string Emails = 2;
+}

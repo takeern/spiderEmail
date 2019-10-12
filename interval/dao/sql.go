@@ -32,22 +32,28 @@ func NewDb(url string) (*ModalDb) {
 	}
 	// db.DB().SetMaxIdleConns(10)
 	// db.DB().SetMaxOpenConns(100)
-	spiderUrl := &SpiderUrl{
-		Url: url,
-	}
-	err = db.Create(&spiderUrl).Error
-	fmt.Println(err)
+	// spiderUrl := &SpiderUrl{
+	// 	Url: url,
+	// }
+	// err = db.Create(&spiderUrl).Error
+	// fmt.Println(err)
 
 	modalDb.db = db
 	modalDb.m = &Modal{}
 	modalDb.m.tabelName = url
-	createTable(modalDb)
+	// createTable(modalDb)
 
 	return modalDb
 }
 
 func (u Modal) TableName() string {
     return u.tabelName
+}
+
+func (mb * ModalDb) CreateTable() error {
+	err := mb.db.CreateTable(mb.m).Error
+	fmt.Println(err)
+	return err
 }
 
 func createTable(mb *ModalDb) {
@@ -61,4 +67,21 @@ func (mb * ModalDb) InsertData(url string, email string) {
 	mb.m.Email = email
 	err := mb.db.Create(mb.m).Error
 	fmt.Println(err)
+}
+
+func (mb * ModalDb) SelectData(num int) ([]Modal, error) {
+	var emailModals []Modal
+	err := mb.db.Limit(num).Table(mb.m.tabelName).
+		Where("status=false").
+		Where("email like ? or email like ? or email like ? or email like ? or email like ? or email like ? or email like ?", 
+		"%126%", "%163%", "%edu%", "%qq%", "%hotmail%", "%sina%", "%yahoo%").
+		Find(&emailModals).Error
+	return emailModals, err
+}
+
+func (mb * ModalDb) UpdateStatus(email string, status bool) error {
+	err := mb.db.Model(&Modal{}).Table(mb.m.tabelName).
+		Where("email = ?", email).
+		Update("status", status).Error
+	return err
 }
