@@ -1,18 +1,23 @@
 package main
 
 import (
+	"net"
+	"log"
+	"google.golang.org/grpc"
+
+	pb "spider/interval/serve/grpc"
 	"spider/interval/dao"
 )
 
-
-
 func main() {
-	// dao.GetUrl("http://www.ijetch.org/index.php?m=content&c=index&a=show&catid=103&id=1372")
-	// dao.Log.Debug("ddadsasd")
-	// mb := dao.NewDb("http://www.ijetch.org/")
-	// mb.InsertData("http://www.ijetch.org/", "hasdhas")
-	// dao.GoSend()
-	dao.CreateDispatch("http://www.ijetch.org/index.php?m=content&c=index&a=show&catid=103&id=1372")
-	// dao.GetUrl("http://www.ijetch.org")
-	// dao.GetUrl("http://www.ijetch.org/index.php?m=content\u0026c=index\u0026a=show\u0026catid=103\u0026id=1373")
+	lis, err := net.Listen("tcp", ":6011")
+	log.Printf("listen: 6011")
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+	s := grpc.NewServer()
+	pb.RegisterTaskServer(s, &dao.Server{})
+	if err := s.Serve(lis); err != nil {
+        log.Fatalf("failed to serve: %v", err)
+	}
 }

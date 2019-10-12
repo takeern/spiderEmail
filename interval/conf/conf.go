@@ -7,6 +7,8 @@ type SendInfo struct {
 }
 
 const WAIT_SEND_EMAIL_TIME = 60 * 50  // 60 * 50
+const SPIDER_TIMEOUT = 15 
+const HTTP_TRY_REQUEST_TIMES = 2
 
 var SendList = [...]SendInfo{
 	{
