@@ -13,6 +13,7 @@ const RETRY_REGISTER_TIMES = 10
 
 const MASTER_HOST = "47.103.12.134:6010"
 const MASTER_TOKEN = "random"
+const SLAVE_PORT = "6011"
 
 var SendList = [...][...]SendInfo[
 	[
