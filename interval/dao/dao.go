@@ -2,7 +2,7 @@ package dao
 
 import (
 	"log"
-	"context"
+	"golang.org/x/net/context"
 	"net/http"
 	"io/ioutil"
 	"crypto/tls"
