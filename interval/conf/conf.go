@@ -8,33 +8,35 @@ type SendInfo struct {
 
 const WAIT_SEND_EMAIL_TIME = 60 * 50  // 60 * 50
 
-var SendList = [...]SendInfo{
-	{
-		Ac:	"takeern@163.com",
-		Ps: "tq123456",
-		Host: "smtp.163.com:25",
-	},
-	{
-		Ac: "tq123456@foxmail.com",
-		Ps: "dazjvvhpevbqbbah",
-		Host: "smtp.qq.com:587",
-	},
-	{
-		Ac: "publish_house@139.com",
-		Ps: "tq6614118",
-		Host: "smtp.139.com:25",
-	},
-	{
-		Ac: "publishhouse@sina.com",
-		Ps: "9822fc8955387b92",
-		Host: "smtp.sina.com:587",
-	},
-	{
-		Ac: "publishhouse@outlook.com",
-		Ps: "tq6614118",
-		Host: "smtp.office365.com:587",
-	},
-}
+var SendList = [...][...]SendInfo[
+	[
+		{
+			Ac:	"takeern@163.com",
+			Ps: "tq123456",
+			Host: "smtp.163.com:25",
+		},
+		{
+			Ac: "tq123456@foxmail.com",
+			Ps: "dazjvvhpevbqbbah",
+			Host: "smtp.qq.com:587",
+		},
+		{
+			Ac: "publish_house@139.com",
+			Ps: "tq6614118",
+			Host: "smtp.139.com:25",
+		},
+		{
+			Ac: "publishhouse@sina.com",
+			Ps: "9822fc8955387b92",
+			Host: "smtp.sina.com:587",
+		},
+		{
+			Ac: "publishhouse@outlook.com",
+			Ps: "tq6614118",
+			Host: "smtp.office365.com:587",
+		},
+	],
+]
 
 var RecieveList = [...]string{
 	"tq123456@foxmail.com",
