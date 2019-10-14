@@ -2,13 +2,14 @@ syntax = "proto3";
 
 package grpc;
 
-service Book {
+service Task {
     rpc HandleTask (HandleTaskReq) returns (HandleTaskResp) {}
 }
 
 message HandleTaskReq {
     int32 TaskCode = 1;
     EmailInfo EmailInfo = 2;
+    string SpiderUrl = 3;
 }
 
 message HandleTaskResp {
@@ -22,7 +23,7 @@ message EmailInfo {
     string Ps = 2;
     string Host = 3;
     string Receive = 4;
-    string ModalIndex = 5;
+    int32 ModalIndex = 5;
 }
 
 message SpiderInfo {
