@@ -22,6 +22,6 @@ func init() {
 		Log.Info("Failed to log to file, using default stderr")
 	}
 
-	Log.Info("something")
-	Log.Warn("warn")
+	Log.Info("")
+	Log.Warn("")
 }

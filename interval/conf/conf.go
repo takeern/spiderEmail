@@ -6,7 +6,7 @@ type SendInfo struct {
 	Host	string
 }
 
-const WAIT_SEND_EMAIL_TIME = 60 * 50  // 60 * 50
+const WAIT_SEND_EMAIL_TIME = 60 * 60 * 3 // 60 * 50
 const SPIDER_TIMEOUT = 15 
 const HTTP_TRY_REQUEST_TIMES = 2
 const RETRY_REGISTER_TIMES = 10
@@ -14,36 +14,37 @@ const RETRY_REGISTER_TIMES = 10
 const MASTER_HOST = "47.103.12.134:6010"
 const MASTER_TOKEN = "random"
 const SLAVE_PORT = "6011"
+const HOST_PORT = "6010"
 
-var SendList = [...][...]SendInfo[
-	[
+var SendList = [...][4]SendInfo{
+	{
+		// {
+		// 	Ac: "tq123456@foxmail.com",
+		// 	Ps: "dazjvvhpevbqbbah",
+		// 	Host: "smtp.qq.com:587",
+		// },
+		{
+			Ac: "publish_house@yeah.net",
+			Ps: "Tq6614118",
+			Host: "smtp.yeah.net:25",
+		},
+		{
+			Ac: "publish_house@sohu.com",
+			Ps: "tq6614118",
+			Host: "smtp.sohu.com:25",
+		},
 		{
 			Ac:	"takeern@163.com",
 			Ps: "tq123456",
 			Host: "smtp.163.com:25",
 		},
 		{
-			Ac: "tq123456@foxmail.com",
-			Ps: "dazjvvhpevbqbbah",
-			Host: "smtp.qq.com:587",
-		},
-		{
-			Ac: "publish_house@139.com",
-			Ps: "tq6614118",
-			Host: "smtp.139.com:25",
-		},
-		{
 			Ac: "publishhouse@sina.com",
 			Ps: "9822fc8955387b92",
 			Host: "smtp.sina.com:587",
 		},
-		{
-			Ac: "publishhouse@outlook.com",
-			Ps: "tq6614118",
-			Host: "smtp.office365.com:587",
-		},
-	],
-]
+	},
+}
 
 var RecieveList = [...]string{
 	"tq123456@foxmail.com",

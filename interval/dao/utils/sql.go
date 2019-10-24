@@ -65,8 +65,8 @@ func (mb * ModalDb) SelectData(num int) ([]Modal, error) {
 	var emailModals []Modal
 	err := mb.db.Limit(num).Table(mb.m.tabelName).
 		Where("status=false").
-		Where("email like ? or email like ? or email like ? or email like ? or email like ? or email like ? or email like ?", 
-		"%126%", "%163%", "%edu%", "%qq%", "%hotmail%", "%sina%", "%yahoo%").
+		Where("email like ? or email like ? or email like ? or email like ? or email like ?", 
+		"%126%", "%163%", "%qq%", "%hotmail%", "%sina%").
 		Find(&emailModals).Error
 	return emailModals, err
 }
@@ -76,4 +76,8 @@ func (mb * ModalDb) UpdateStatus(email string, status bool) error {
 		Where("email = ?", email).
 		Update("status", status).Error
 	return err
+}
+
+func (mb * ModalDb) Close() {
+	mb.db.Close()
 }

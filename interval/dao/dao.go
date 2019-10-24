@@ -1,90 +1,89 @@
 package dao
 
 import (
-	"log"
-	"golang.org/x/net/context"
-	"net/http"
-	"io/ioutil"
-	"crypto/tls"
+	// "fmt"
+	"runtime"
+	"spider/interval/dao/master"
 	"spider/interval/conf"
-	pb "spider/interval/serve/grpc"
+	"spider/interval/dao/slave"
+	"github.com/gin-gonic/gin"
 )
 
-type Server struct{}
+var (
+	S		*Serve
+)
 
-func init() {
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	registerIp(0)
+type Serve struct {
+	Ms 			*master.MasterServe
+	Ip_list		map[string]bool
+	status		string
 }
 
-
-func (s *Server) HandleTask(ctx context.Context, req *pb.HandleTaskReq) (*pb.HandleTaskResp, error) {
-	resp := new(pb.HandleTaskResp)
-	selectTaskRun(req, resp)
-	return resp, nil
+type EmailInfo struct {
+	waitSpiderLen			int
+	spiderIndex  			int
+	errSpiderLen  			int
+	successSpider  			[]string
+	errorSpider  			[]string
 }
 
-/*
- * 选择任务类型
- * 1000 发送 email
- * 1001 爬取页面 email
- */
-func selectTaskRun(req *pb.HandleTaskReq, resp *pb.HandleTaskResp) (*pb.HandleTaskResp) {
-	switch req.TaskCode {
-	case conf.SEND_EMAIL:
-		err := SendMail(req.EmailInfo.Ac, 
-			req.EmailInfo.Ps, 
-			req.EmailInfo.Host, 
-			req.EmailInfo.Receive,
-			"无主题",
-			conf.EmailModalList[req.EmailInfo.ModalIndex],
-			"html")
-		if err != nil {
-			resp.Code = 10001
-			resp.ErrorMsg = err.Error()
-		} else {
-			resp.Code = 10000
-		}
-		
-		return resp
-	case conf.SPIDER_EMAIL:
-		err, emails, urls := SpiderEmail(req.SpiderUrl, 0)
-		if err != nil {
-			resp.Code = 10002
-			resp.ErrorMsg = err.Error()
-		} else {
-			resp.Code = 10000
-			resp.SpiderInfo.Emails = emails
-			resp.SpiderInfo.Urls = urls
-		}
-		return resp
-	default:
-		resp.Code = 10003
-		resp.ErrorMsg = "unhandle task code"
-		return resp
-	}
-}
-
-func registerIp(times int) {
-	if (times > conf.RETRY_REGISTER_TIMES) {
-		log.Fatal("register many time exit")
-	}
-	resp, err := http.Get(conf.MASTER_HOST + "?token=" + conf.MASTER_TOKEN)
-	if err != nil {
-		times ++
-		registerIp(times)
-		return
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		times ++
-		registerIp(times)
-		return
-	}
-	if (body[0] == 0) {
-		log.Println("register success")
+func CreateServe(nodeType string) *Serve {
+	var typeStatus bool
+	if nodeType == "master" {
+		typeStatus = true
 	} else {
-		log.Fatal("register res unhandle %v", body)
+		slave.CreateSlaveServe()
+		typeStatus = false
 	}
+	S = &Serve{
+		Ip_list: make(map[string]bool),
+		Ms:		master.NewMasterServe(typeStatus),
+		status: nodeType,
+	}
+
+	if S.status == "master" {
+		StarServe()
+	}
+
+	return S
+}
+
+
+func (s *Serve)handleIpRegistry(c *gin.Context) {
+	ip := c.ClientIP()
+	s.Ip_list[ip] = true
+	if s.status == "master" {
+		s.Ms.HandleNewIpRegistry(ip)
+	}
+	c.JSON(200, gin.H{
+		"code": "10000",
+		"msg": "ip registry success",
+	})
+}
+
+func (s *Serve) getServeInfo(c *gin.Context) {
+	c.JSON(200, gin.H{
+		"code": "10000",
+		"ip_list": s.Ip_list,
+		"Goroutines": runtime.NumGoroutine(),
+		"waitSpiderLen": len(s.Ms.Email.Email_list),
+		"spiderIndex": s.Ms.Email.Email_send_index,
+		"errSpiderLen": len(s.Ms.Email.Error_Email_list),
+		"successSpider": s.Ms.Email.Success_Email_list,
+		"errorSpider": s.Ms.Email.Error_Email_list,
+		// "emailInfo": &map{
+		// 	"waitSpiderLen": len(s.Ms.Email.Email_list),
+		// 	"spiderIndex": len(s.Ms.Email.Email_send_index),
+		// 	"errSpiderLen": len(s.Ms.Email.Error_Email_list),
+		// 	"successSpider": s.Ms.Email.Success_Email_list,
+		// 	"errorSpider": s.Ms.Email.Error_Email_list,
+		// },
+	})
+}
+
+func StarServe() {
+	r := gin.Default()
+	r.GET("/register", S.handleIpRegistry)
+	r.GET("/getServeInfo", S.getServeInfo)
+	r.Run(":" + conf.HOST_PORT)
 }

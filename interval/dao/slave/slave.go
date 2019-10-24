@@ -2,11 +2,13 @@ package slave
 
 import (
 	"log"
-	"golang.org/x/net/context"
+	"context"
 	"net/http"
 	"io/ioutil"
 	"crypto/tls"
 	"spider/interval/conf"
+	"net"
+	"google.golang.org/grpc"
 	pb "spider/interval/serve/grpc"
 )
 
@@ -14,6 +16,19 @@ type Server struct{}
 
 func init() {
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+}
+
+func CreateSlaveServe() {
+	lis, err := net.Listen("tcp", ":6011")
+	log.Printf("listen: 6011")
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+	s := grpc.NewServer()
+	pb.RegisterTaskServer(s, &Server{})
+	if err := s.Serve(lis); err != nil {
+        log.Fatalf("failed to serve: %v", err)
+	}
 	registerIp(0)
 }
 
@@ -69,7 +84,7 @@ func registerIp(times int) {
 	if (times > conf.RETRY_REGISTER_TIMES) {
 		log.Fatal("register many time exit")
 	}
-	resp, err := http.Get(conf.MASTER_HOST + "?token=" + conf.MASTER_TOKEN)
+	resp, err := http.Get(conf.MASTER_HOST + "/register")
 	if err != nil {
 		times ++
 		registerIp(times)

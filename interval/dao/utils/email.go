@@ -3,10 +3,6 @@ package utils
 import (
     "net/smtp"
 	"strings"
-	"spider/interval/conf"
-	"time"
-	"fmt"
-	"sync"
 )
 
 //发送邮件的逻辑函数
