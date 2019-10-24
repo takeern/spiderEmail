@@ -38,14 +38,18 @@ func CreateEmailDispatch(createStatus bool, url string) *Dispatch {
 		Success_Email_list: make([]string, 0, 3000),
 		modalDb: utils.NewDb(url),
 	}
-	list, err := d.modalDb.SelectData(1000)
-	if err != nil {
-		utils.Log.Warn("get emails error", url, err)
-	} else {
-		utils.Log.Info("get emails success", len(d.Email_list))
-	}
-	for _, item := range list {
-		d.Email_list = append(d.Email_list, item.Email)
+	// list, err := d.modalDb.SelectData(1000)
+	// if err != nil {
+	// 	utils.Log.Warn("get emails error", url, err)
+	// } else {
+	// 	utils.Log.Info("get emails success", len(d.Email_list))
+	// }
+	// for _, item := range list {
+	// 	d.Email_list = append(d.Email_list, item.Email)
+	// }
+
+	for i := 0; i < 15; i++ {
+		d.Email_list = append(d.Email_list, "takeern@163.com")
 	}
 
 	return d

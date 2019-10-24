@@ -11,7 +11,7 @@ import (
 
 
 func main() {
-	dao.CreateServe("slave")
+	dao.CreateServe("master")
 }
 
 
