@@ -1,82 +1,39 @@
 package dao
 
 import (
-	// "fmt"
-	"runtime"
-	"spider/interval/dao/master"
+	// "golang.org/grpc-go"
+	"google.golang.org/grpc"
+	"log"
+	"net"
 	"spider/interval/conf"
+	pb "spider/interval/serve/grpc"
+	"spider/interval/dao/master"
 	"spider/interval/dao/slave"
-	"github.com/gin-gonic/gin"
 )
 
-var (
-	S		*Serve
-)
+func CreateMasterServer() {
 
-type Serve struct {
-	Ms 			*master.MasterServe
-	Ip_list		map[string]bool
-	status		string
-}
-
-type EmailInfo struct {
-	waitSpiderLen			int
-	spiderIndex  			int
-	errSpiderLen  			int
-	successSpider  			[]string
-	errorSpider  			[]string
-}
-
-func CreateServe(nodeType string) *Serve {
-	var typeStatus bool
-	if nodeType == "master" {
-		typeStatus = true
-	} else {
-		slave.CreateSlaveServe()
-		typeStatus = false
-	}
-	S = &Serve{
-		Ip_list: make(map[string]bool),
-		Ms:		master.NewMasterServe(typeStatus),
-		status: nodeType,
+	ms := &master.MasterServer{
+		IpList:        make(map[string]bool),
+		EmailDispatch: master.CreateEmailDispatch(conf.DB_URL),
 	}
 
-	if S.status == "master" {
-		StarServe()
+	ms.StarServer()
+}
+
+func CreateSlaveServer() {
+	lis, err := net.Listen("tcp", ":" + conf.SLAVE_PORT)
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
 	}
 
-	return S
-}
+	log.Printf("listen: " + conf.SLAVE_PORT + " port succeed")
 
-
-func (s *Serve)handleIpRegistry(c *gin.Context) {
-	ip := c.ClientIP()
-	s.Ip_list[ip] = true
-	if s.status == "master" {
-		s.Ms.HandleNewIpRegistry(ip)
+	s := grpc.NewServer()
+	pb.RegisterTaskServer(s, &slave.SlaveServer{})
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("failed to start server: %v", err)
 	}
-	c.JSON(200, gin.H{
-		"code": "10000",
-		"msg": "ip registry success",
-	})
-}
 
-func (s *Serve) getServeInfo(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"code": "10000",
-		"ip_list": s.Ip_list,
-		"Goroutines": runtime.NumGoroutine(),
-		"waitSpiderLen": len(s.Ms.Email.Email_list),
-		"spiderIndex": s.Ms.Email.Email_send_index,
-		"errSpiderLen": len(s.Ms.Email.Error_Email_list),
-		"successSpider": s.Ms.Email.Success_Email_list,
-		"errorSpider": s.Ms.Email.Error_Email_list,
-	})
-}
-
-func StarServe() {
-	r := gin.Default()
-	r.GET("/register", S.handleIpRegistry)
-	r.GET("/getServeInfo", S.getServeInfo)
-	r.Run(":" + conf.HOST_PORT)
+	slave.RegisterIp(0)
 }

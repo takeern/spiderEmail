@@ -10,6 +10,7 @@ import (
 	pb "spider/interval/serve/grpc"
 	"spider/interval/dao/utils"
 	"google.golang.org/grpc"
+	// "golang.org/grpc-go"
 )
 
 var (
@@ -25,13 +26,11 @@ type Dispatch struct {
 	Success_Email_list	[]string
 	Email_send_index	int
 	send_user_index		int
-	status		bool
 	modalDb		*utils.ModalDb
 }	
 
-func CreateEmailDispatch(createStatus bool, url string) *Dispatch {
+func CreateEmailDispatch(url string) *Dispatch {
 	d := &Dispatch{
-		status: createStatus,
 		Ip_list: make([]string, 0, 100),
 		Email_list: make([]string, 0, 3000),
 		Error_Email_list: make([]string, 0, 3000),
