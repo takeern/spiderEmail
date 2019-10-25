@@ -1,29 +1,30 @@
 package main
 
 import (
-	// "net"
-	// "log"
-	// "google.golang.org/grpc"
-
-	// pb "spider/interval/serve/grpc"
+	"fmt"
+	"flag"
+	"log"
+	"net"
 	"spider/interval/dao"
+	"golang.org/grpc-go"
+	pb "spider/interval/serve/grpc"
 )
 
 
 func main() {
-	dao.CreateServe("master")
+	help := flag.Bool("help", false, "show usage")
+	slave := flag.Bool("slave", false, "start as a slave node")
+	flag.Parse()
+
+	if *help {
+		fmt.Print("Usage:   ./spider --- start as a master node\n" +
+			"         ./spider slave --- start as a slave node\n")
+		return
+	}
+
+	if *slave {
+		dao.CreateSlaveServer()
+	} else {
+		dao.CreateMasterServer()
+	}
 }
-
-
-// func main() {
-// 	lis, err := net.Listen("tcp", ":6011")
-// 	log.Printf("listen: 6011")
-// 	if err != nil {
-// 		log.Fatalf("failed to listen: %v", err)
-// 	}
-// 	s := grpc.NewServer()
-// 	pb.RegisterTaskServer(s, &dao.Server{})
-// 	if err := s.Serve(lis); err != nil {
-//         log.Fatalf("failed to serve: %v", err)
-// 	}
-// }

@@ -8,7 +8,8 @@ import (
 	"crypto/tls"
 	"spider/interval/conf"
 	"net"
-	"google.golang.org/grpc"
+	// "google.golang.org/grpc"
+	"golang.org/grpc-go"
 	pb "spider/interval/serve/grpc"
 )
 

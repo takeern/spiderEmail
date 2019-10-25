@@ -16,6 +16,8 @@ const MASTER_HOST = "47.103.12.134:" + HOST_PORT
 const MASTER_TOKEN = "random"
 const SLAVE_PORT = "6011"
 
+const DB_URL = "http://wwwijetchorg/"
+
 var SendList = [...][4]SendInfo{
 	{
 		// {
