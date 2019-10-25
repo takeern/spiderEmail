@@ -25,26 +25,26 @@ var SendList = [...][4]SendInfo{
 		// 	Ps: "dazjvvhpevbqbbah",
 		// 	Host: "smtp.qq.com:587",
 		// },
-		// {
-		// 	Ac: "publish_house@yeah.net",
-		// 	Ps: "Tq6614118",
-		// 	Host: "smtp.yeah.net:25",
-		// },
-		// {
-		// 	Ac: "publish_house@sohu.com",
-		// 	Ps: "tq6614118",
-		// 	Host: "smtp.sohu.com:25",
-		// },
+		{
+			Ac: "publish_house@yeah.net",
+			Ps: "Tq6614118",
+			Host: "smtp.yeah.net:25",
+		},
+		{
+			Ac: "publish_house@sohu.com",
+			Ps: "tq6614118",
+			Host: "smtp.sohu.com:25",
+		},
 		{
 			Ac:	"takeern@163.com",
 			Ps: "tq123456",
 			Host: "smtp.163.com:25",
 		},
-		// {
-		// 	Ac: "publishhouse@sina.com",
-		// 	Ps: "9822fc8955387b92",
-		// 	Host: "smtp.sina.com:587",
-		// },
+		{
+			Ac: "publishhouse@sina.com",
+			Ps: "9822fc8955387b92",
+			Host: "smtp.sina.com:587",
+		},
 	},
 }
 
