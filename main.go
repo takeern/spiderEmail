@@ -3,11 +3,7 @@ package main
 import (
 	"fmt"
 	"flag"
-	"log"
-	"net"
-	"spider/interval/dao"
-	"golang.org/grpc-go"
-	pb "spider/interval/serve/grpc"
+	. "spider/interval/dao"
 )
 
 
@@ -23,8 +19,8 @@ func main() {
 	}
 
 	if *slave {
-		dao.CreateSlaveServer()
+		CreateSlaveServer()
 	} else {
-		dao.CreateMasterServer()
+		CreateMasterServer()
 	}
 }
