@@ -71,13 +71,6 @@ func (s *Serve) getServeInfo(c *gin.Context) {
 		"errSpiderLen": len(s.Ms.Email.Error_Email_list),
 		"successSpider": s.Ms.Email.Success_Email_list,
 		"errorSpider": s.Ms.Email.Error_Email_list,
-		// "emailInfo": &map{
-		// 	"waitSpiderLen": len(s.Ms.Email.Email_list),
-		// 	"spiderIndex": len(s.Ms.Email.Email_send_index),
-		// 	"errSpiderLen": len(s.Ms.Email.Error_Email_list),
-		// 	"successSpider": s.Ms.Email.Success_Email_list,
-		// 	"errorSpider": s.Ms.Email.Error_Email_list,
-		// },
 	})
 }
 
