@@ -4,6 +4,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 	"fmt"
+	"log"
+	"spider/interval/conf"
 )
 
 //user表结构体定义
@@ -25,10 +27,13 @@ type SpiderUrl struct {
 
 func NewDb(url string) (*ModalDb) {
 	modalDb := &ModalDb {}
-	db, err := gorm.Open("mysql", "root:maskTakeern@tcp(47.103.12.134:3306)/spider?charset=utf8")
+	db, err := gorm.Open("mysql", conf.DB_USER + ":" + conf.DB_PSAAWD + "@tcp(" + conf.DB_IP +
+		": " + conf.DB_PORT + ")/" + conf.DB_DATABASE + "?charset=" + conf.DB_CHARSET)
 	if err != nil {
-		fmt.Println(err)
-		return nil
+		// fmt.Println(err)
+		// return nil
+		// 感觉这个地方直接退出比较好，毕竟是初始化失败了
+		log.Fatalf("open mysql failed: %v", err)
 	}
 
 	modalDb.db = db
