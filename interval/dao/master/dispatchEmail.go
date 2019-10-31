@@ -17,7 +17,7 @@ var (
 	wg 		*sync.WaitGroup
 )
 
-type Dispatch struct {
+type EmailDispatch struct {
 	mu      	sync.Mutex // guards balance
 	c			pb.TaskClient
 	Ip_list		[]string
@@ -29,8 +29,8 @@ type Dispatch struct {
 	modalDb		*utils.ModalDb
 }	
 
-func CreateEmailDispatch(url string) *Dispatch {
-	d := &Dispatch{
+func CreateEmailDispatch(url string) *EmailDispatch {
+	d := &EmailDispatch{
 		Ip_list: make([]string, 0, 100),
 		Email_list: make([]string, 0, 3000),
 		Error_Email_list: make([]string, 0, 3000),
@@ -54,7 +54,7 @@ func CreateEmailDispatch(url string) *Dispatch {
 	return d
 }
 
-func (d *Dispatch) newIpConnect(ip string) {
+func (d *EmailDispatch) newIpConnect(ip string) {
 	for _, item := range d.Ip_list {
 		if item == ip {
 			utils.Log.Info("this ip is in route", ip)
@@ -62,17 +62,17 @@ func (d *Dispatch) newIpConnect(ip string) {
 		}
 	}
 	d.Ip_list = append(d.Ip_list, ip)
-	d.c, _ = createConn(ip)
+	d.c, _ = CreateConn(ip)
 }
 
 
 
-func (d *Dispatch) InjectIp(ips []string) {
+func (d *EmailDispatch) InjectIp(ips []string) {
 	d.Ip_list = ips
 	return
 }
 
-func (d *Dispatch) InjectUrl(url string) {
+func (d *EmailDispatch) InjectUrl(url string) {
 	d.modalDb.Close()
 	d.modalDb = utils.NewDb(url)
 	list, err := d.modalDb.SelectData(1000)
@@ -88,7 +88,7 @@ func (d *Dispatch) InjectUrl(url string) {
 	return
 }
 
-func (d *Dispatch) HandleNewIpRegistry(ip string) {
+func (d *EmailDispatch) HandleNewIpRegistry(ip string) {
 	fmt.Println(ip)
 	go sendTask(ip, d.send_user_index, d)
 	// go func ()  {
@@ -109,8 +109,8 @@ func (d *Dispatch) HandleNewIpRegistry(ip string) {
  * ip 当前连接地址
  * index 当前使用第几套send list 模型
  */
-func sendTask(ip string, index int, d *Dispatch) {
-	c, err := createConn(ip)
+func sendTask(ip string, index int, d *EmailDispatch) {
+	c, err := CreateConn(ip)
 	Aclen := len(conf.SendList[0])
 	fmt.Println(Aclen)
 	var sendModalIndex [4]int
@@ -170,7 +170,7 @@ func sendTask(ip string, index int, d *Dispatch) {
 }
 
 
-func createConn(ip string) (pb.TaskClient, error) {
+func CreateConn(ip string) (pb.TaskClient, error) {
 	
 	conn, err := grpc.Dial(ip + ":" + conf.SLAVE_PORT, grpc.WithInsecure())
 	c := pb.NewTaskClient(conn)

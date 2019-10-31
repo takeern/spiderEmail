@@ -7,6 +7,7 @@ type SendInfo struct {
 }
 
 const WAIT_SEND_EMAIL_TIME = 60 * 60 * 3 // 60 * 50
+const WAIT_SPIDER_TIME = 60 * 2
 const SPIDER_TIMEOUT = 15 
 const HTTP_TRY_REQUEST_TIMES = 2
 const RETRY_REGISTER_TIMES = 10
@@ -56,7 +57,7 @@ var RecieveList = [...]string{
 
 const (
 	SEND_EMAIL = 1000
-	SPIDER_EMAIL = iota
+	SPIDER_EMAIL = 1001
 )
 
 

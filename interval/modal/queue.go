@@ -1,34 +1,38 @@
 package modal
 
 type Queue struct {
-	q		[]string
+	Q		[]string
 	length	int
 }
 
 func NewQueue() *Queue {
 	queue := &Queue{
-		q: make([]string, 0, 2000),
+		Q: make([]string, 0, 2000),
 	}
 	return queue
 }
 
 func (q *Queue) Push(i string) {
-	q.q = append(q.q, i)
+	q.Q = append(q.Q, i)
 	q.length += 1
 }
 
+func (q *Queue) PushList(i []string) {
+	q.Q = append(q.Q, i...)
+}
+
 func (q *Queue) Shift() (string) {
-	item := q.q[0]
-	q.q = q.q[1:]
+	item := q.Q[0]
+	q.Q = q.Q[1:]
 	return item
 }
 
 func (q *Queue) Len() (int) {
-	return q.length
+	return len(q.Q)
 }
 
 func (q *Queue) HasValue(v string) (bool) {
-	for _, value := range q.q {
+	for _, value := range q.Q {
 		if (value == v) {
 			return true
 		}

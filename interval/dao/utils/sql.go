@@ -34,6 +34,9 @@ func NewDb(url string) (*ModalDb) {
 	modalDb.db = db
 	modalDb.m = &Modal{}
 	modalDb.m.tabelName = url
+	if (!modalDb.db.HasTable(url)) {
+		modalDb.CreateTable()
+	}
 
 	return modalDb
 }
@@ -42,15 +45,11 @@ func (u Modal) TableName() string {
     return u.tabelName
 }
 
-func (mb * ModalDb) CreateTable() error {
+func (mb * ModalDb) CreateTable() {
 	err := mb.db.CreateTable(mb.m).Error
-	fmt.Println(err)
-	return err
-}
-
-func createTable(mb *ModalDb) {
-	err := mb.db.CreateTable(mb.m).Error
-	fmt.Println(err)
+	if nil != err {
+		fmt.Println(err)
+	}
 }
 
 // 插入数据
@@ -58,7 +57,9 @@ func (mb * ModalDb) InsertData(url string, email string) {
 	mb.m.Url = url
 	mb.m.Email = email
 	err := mb.db.Create(mb.m).Error
-	fmt.Println(err)
+	if nil != err {
+		fmt.Println(err)
+	}
 }
 
 func (mb * ModalDb) SelectData(num int) ([]Modal, error) {
