@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"errors"
 	"spider/interval/conf"
+	"code.sajari.com/docconv"
 )
 
 var (
@@ -26,21 +27,28 @@ func init() {
 func SpiderEmail(url string, times int) (error, []string, []string) {
 	emails := make([]string, 0, 100)
 	urls := make([]string, 0, 100)
+	var html string
 	if (times > conf.HTTP_TRY_REQUEST_TIMES) {
 		return errors.New("too many try"), emails, urls
 	}
 	res, err := client.Get(url)
+	defer res.Body.Close()
 	if err != nil {
 		times ++
 		return SpiderEmail(url, times)
 	} else {
-		defer res.Body.Close()
-		Body, err := ioutil.ReadAll(res.Body)
-		html := string(Body)
-		emails = drawEmail(html)
-		urls = drawUrl(html)
-		return err, emails, urls
+		isPDF, _ := regexp.MatchString(`\.pdf`, url)
+		if isPDF {
+			html, _, _ = docconv.ConvertPDF(res.Body)
+		} else {
+			Body, _ := ioutil.ReadAll(res.Body)
+			html = string(Body)
+		}
 	}
+
+	emails = drawEmail(html)
+	urls = drawUrl(html)
+	return err, emails, urls
 }
 
 // 提取页面邮箱
