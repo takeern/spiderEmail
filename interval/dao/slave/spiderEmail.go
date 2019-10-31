@@ -37,7 +37,7 @@ func SpiderEmail(url string, times int) (error, []string, []string) {
 		return SpiderEmail(url, times)
 	} else {
 		defer res.Body.Close()
-		isPDF, _ := regexp.MatchString(`\.pdf`, url)
+		isPDF, _ := regexp.MatchString(`pdf`, res.Header["Content-Type"][0])
 		if isPDF {
 			html, _, _ = docconv.ConvertPDF(res.Body)
 		} else {
