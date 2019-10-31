@@ -18,8 +18,7 @@ func init() {
 }
 
 func (s *SlaveServer) HandleTask(ctx context.Context, req *pb.HandleTaskReq) (*pb.HandleTaskResp, error) {
-	resp := new(pb.HandleTaskResp)
-	selectTaskRun(req, resp)
+	resp := selectTaskRun(req)
 	return resp, nil
 }
 
@@ -52,7 +51,10 @@ func RegisterIp(times int) {
  * 1000 发送 email
  * 1001 爬取页面 email
  */
-func selectTaskRun(req *pb.HandleTaskReq, resp *pb.HandleTaskResp) (*pb.HandleTaskResp) {
+func selectTaskRun(req *pb.HandleTaskReq) (*pb.HandleTaskResp) {
+	resp := &pb.HandleTaskResp{
+		SpiderInfo: &pb.SpiderInfo{},
+	}
 	switch req.TaskCode {
 	case conf.SEND_EMAIL:
 		err := SendMail(req.EmailInfo.Ac,
@@ -69,8 +71,9 @@ func selectTaskRun(req *pb.HandleTaskReq, resp *pb.HandleTaskResp) (*pb.HandleTa
 			resp.Code = 10000
 		}
 
-		return resp
+		break
 	case conf.SPIDER_EMAIL:
+		log.Println(resp)
 		err, emails, urls := SpiderEmail(req.SpiderUrl, 0)
 		if err != nil {
 			resp.Code = 10002
@@ -80,10 +83,11 @@ func selectTaskRun(req *pb.HandleTaskReq, resp *pb.HandleTaskResp) (*pb.HandleTa
 			resp.SpiderInfo.Emails = emails
 			resp.SpiderInfo.Urls = urls
 		}
-		return resp
+		break
 	default:
 		resp.Code = 10003
 		resp.ErrorMsg = "unhandle task code"
-		return resp
+		break
 	}
+	return resp
 }

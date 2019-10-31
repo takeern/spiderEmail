@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"errors"
 	"spider/interval/conf"
+	"code.sajari.com/docconv"
 )
 
 var (
@@ -26,6 +27,7 @@ func init() {
 func SpiderEmail(url string, times int) (error, []string, []string) {
 	emails := make([]string, 0, 100)
 	urls := make([]string, 0, 100)
+	var html string
 	if (times > conf.HTTP_TRY_REQUEST_TIMES) {
 		return errors.New("too many try"), emails, urls
 	}
@@ -35,12 +37,20 @@ func SpiderEmail(url string, times int) (error, []string, []string) {
 		return SpiderEmail(url, times)
 	} else {
 		defer res.Body.Close()
-		Body, err := ioutil.ReadAll(res.Body)
-		html := string(Body)
-		emails = drawEmail(html)
-		urls = drawUrl(html)
-		return err, emails, urls
+		isPDF, _ := regexp.MatchString(`pdf`, res.Header["Content-Type"][0])
+		if isPDF {
+			html, _, _ = docconv.ConvertPDF(res.Body)
+		} else {
+			Body, _ := ioutil.ReadAll(res.Body)
+			html = string(Body)
+		}
 	}
+
+	emails = drawEmail(html)
+	re := regexp.MustCompile(`(http|https):\/\/?([^/]*)`)
+	host_url := string(re.Find([]byte(url)))
+	urls = drawUrl(html, host_url)
+	return err, emails, urls
 }
 
 // 提取页面邮箱
@@ -55,21 +65,19 @@ func drawEmail(html string) []string {
 }
 
 // 提取页面url
-func drawUrl(html string) []string {
+func drawUrl(html string, host_url string) []string {
 	re := regexp.MustCompile(`<a[^>]*href[=\"\'\s]+([^\"\']*)[\"\']?[^>]*>`)
 	params := re.FindAllSubmatch([]byte(html), -1)
 	urls := make([]string, 0, 100)
 	for _, param := range params {
-		url := editUlr(string(param[1]))
+		url := editUlr(string(param[1]), host_url)
 		urls = append(urls, url)
 	}
 	return urls
 }
 
 // 检查 url 合法性
-func editUlr(url string) (string) {
-	re := regexp.MustCompile(`(http|https):\/\/?([^/]*)`)
-	host_url := string(re.Find([]byte(url)))
+func editUlr(url string, host_url string) (string) {
 	isAbsoluteUrl, ok := regexp.MatchString(`(http|https):\/\/`, url)
 	if ok != nil {
 		return ""
