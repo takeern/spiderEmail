@@ -32,11 +32,11 @@ func SpiderEmail(url string, times int) (error, []string, []string) {
 		return errors.New("too many try"), emails, urls
 	}
 	res, err := client.Get(url)
-	defer res.Body.Close()
 	if err != nil {
 		times ++
 		return SpiderEmail(url, times)
 	} else {
+		defer res.Body.Close()
 		isPDF, _ := regexp.MatchString(`\.pdf`, url)
 		if isPDF {
 			html, _, _ = docconv.ConvertPDF(res.Body)
@@ -47,7 +47,9 @@ func SpiderEmail(url string, times int) (error, []string, []string) {
 	}
 
 	emails = drawEmail(html)
-	urls = drawUrl(html)
+	re := regexp.MustCompile(`(http|https):\/\/?([^/]*)`)
+	host_url := string(re.Find([]byte(url)))
+	urls = drawUrl(html, host_url)
 	return err, emails, urls
 }
 
@@ -63,21 +65,19 @@ func drawEmail(html string) []string {
 }
 
 // 提取页面url
-func drawUrl(html string) []string {
+func drawUrl(html string, host_url string) []string {
 	re := regexp.MustCompile(`<a[^>]*href[=\"\'\s]+([^\"\']*)[\"\']?[^>]*>`)
 	params := re.FindAllSubmatch([]byte(html), -1)
 	urls := make([]string, 0, 100)
 	for _, param := range params {
-		url := editUlr(string(param[1]))
+		url := editUlr(string(param[1]), host_url)
 		urls = append(urls, url)
 	}
 	return urls
 }
 
 // 检查 url 合法性
-func editUlr(url string) (string) {
-	re := regexp.MustCompile(`(http|https):\/\/?([^/]*)`)
-	host_url := string(re.Find([]byte(url)))
+func editUlr(url string, host_url string) (string) {
 	isAbsoluteUrl, ok := regexp.MatchString(`(http|https):\/\/`, url)
 	if ok != nil {
 		return ""

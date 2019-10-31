@@ -106,9 +106,6 @@ func (d *SpiderDispatch) sendTask(ip string) {
 				// 爬取成功
 				d.Had_spider_queue.Push(next_url)
 				utils.Log.Info("spider url: success", next_url)
-				if (len(resp.SpiderInfo.Urls) != 0) {
-					d.Wait_spider_queue.PushList(resp.SpiderInfo.Urls)
-				}
 
 				for _, url := range resp.SpiderInfo.Urls {
 					if (!d.Wait_spider_queue.HasValue(url) && !d.Had_spider_queue.HasValue(url)) {	// 检查是否已爬去过
@@ -132,4 +129,3 @@ func (d *SpiderDispatch) sendTask(ip string) {
 		time.Sleep(conf.WAIT_SPIDER_TIME * time.Second)
 	}
 }
-
