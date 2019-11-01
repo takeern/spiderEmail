@@ -1,26 +1,46 @@
 package main
 
 import (
-	"fmt"
 	"flag"
+	"fmt"
 	. "spider/interval/dao"
 )
 
+var (
+	help     bool
+	master   bool
+	slave    bool
+)
+
+func init() {
+	flag.BoolVar(&help, "help", false, "show usage")
+	flag.BoolVar(&master, "master", false, "start as a master node")
+	flag.BoolVar(&slave, "slave", false, "start as a slave node")
+}
+
+func showUsage()  {
+	fmt.Print("Usage:   ./spider master --- start as a master node\n" +
+		"         ./spider slave --- start as a slave node\n\n" +
+		"         good luck, my bro\n")
+}
 
 func main() {
-	help := flag.Bool("help", false, "show usage")
-	slave := flag.Bool("slave", false, "start as a slave node")
 	flag.Parse()
 
-	if *help {
-		fmt.Print("Usage:   ./spider --- start as a master node\n" +
-			"         ./spider slave --- start as a slave node\n")
+	if help {
+		showUsage()
 		return
 	}
 
-	if *slave {
+	if slave {
 		CreateSlaveServer()
-	} else {
-		CreateMasterServer()
+		return
 	}
+
+	if master {
+		CreateMasterServer()
+		return
+	}
+
+	showUsage()
 }

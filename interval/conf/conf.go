@@ -6,6 +6,14 @@ type SendInfo struct {
 	Host	string
 }
 
+const DB_USER = "root"
+const DB_PSAAWD = "passwd"
+// const DB_IP = "47.103.12.134"
+const DB_IP = "127.0.0.1"
+const DB_PORT = "3306"
+const DB_DATABASE = "spider"
+const DB_CHARSET = "utf8"
+
 const WAIT_SEND_EMAIL_TIME = 60 * 60 * 3 // 60 * 50
 const WAIT_SPIDER_TIME = 60 * 2
 const SPIDER_TIMEOUT = 15 

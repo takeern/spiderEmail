@@ -2,7 +2,6 @@ package conf
 
 import (
 	log "github.com/sirupsen/logrus"
-	
 )
 
 type UTCFormatter struct {
@@ -17,5 +16,5 @@ func (u UTCFormatter) Format(e *log.Entry) ([]byte, error) {
 func init() {
 	log.SetFormatter(UTCFormatter{&log.JSONFormatter{}})
 	log.SetLevel(log.DebugLevel)
-	log.Info("something")
+	// log.Info("something")
 }
