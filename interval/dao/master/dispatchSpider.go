@@ -100,8 +100,6 @@ func (d *SpiderDispatch) sendTask(ip string) {
 				}
 				fmt.Println(resp)
 				utils.Log.Error("grpc: spider url error ", next_url, msg)
-				d.mu.Unlock()
-				continue
 			} else {
 				// 爬取成功
 				d.Had_spider_queue.Push(next_url)
