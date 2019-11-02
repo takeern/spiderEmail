@@ -7,9 +7,9 @@ type SendInfo struct {
 }
 
 const DB_USER = "root"
-const DB_PSAAWD = "passwd"
-// const DB_IP = "47.103.12.134"
-const DB_IP = "127.0.0.1"
+const DB_PSAAWD = "maskTakeern"
+const DB_IP = "47.103.12.134"
+// const DB_IP = "127.0.0.1"
 const DB_PORT = "3306"
 const DB_DATABASE = "spider"
 const DB_CHARSET = "utf8"
