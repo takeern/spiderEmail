@@ -1,6 +1,7 @@
 package master
 
 import (
+	"github.com/google/martian/log"
 	"sync"
 	"fmt"
 	"spider/interval/conf"
@@ -10,7 +11,6 @@ import (
 	pb "spider/interval/serve/grpc"
 	"spider/interval/dao/utils"
 	"google.golang.org/grpc"
-	// "golang.org/grpc-go"
 )
 
 var (
@@ -173,6 +173,10 @@ func sendTask(ip string, index int, d *EmailDispatch) {
 func CreateConn(ip string) (pb.TaskClient, error) {
 	
 	conn, err := grpc.Dial(ip + ":" + conf.SLAVE_PORT, grpc.WithInsecure())
+	if err != nil {
+		log.Errorf("connet to slave node failed, node ip: %s, err: %v", ip, err)
+		return nil ,err
+	}
 	c := pb.NewTaskClient(conn)
 	return c, err
 }
