@@ -11,12 +11,10 @@ import (
 )
 
 func CreateMasterServer() {
-	// http://www.jissr.net/src/assets/pdf/2014-1-2_14.pdf http://dpi-proceedings.com
-	url := "http://dpi-proceedings.com/index.php/dtem/article/download/31137/29718"
 	ms := &master.MasterServer{
 		IpList:        make(map[string]bool),
 		EmailDispatch: master.CreateEmailDispatch(conf.DB_URL),
-		SpiderDispatch: master.CreateDispatchSpider(url),
+		SpiderDispatch: master.CreateDispatchSpider(conf.SPIDER_URL),
 	}
 
 	ms.StarServer()

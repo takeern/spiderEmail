@@ -20,7 +20,7 @@ import (
 type SpiderDispatch struct {
 	mu      				sync.Mutex
 	c						pb.TaskClient
-	Ip_list					[]string
+	Ip_list					*modal.Queue
 	Wait_spider_queue 		*modal.Queue
 	Had_spider_queue 		*modal.Queue
 	retry_spider_queue 		*modal.Queue
@@ -39,7 +39,7 @@ func init() {
 func CreateDispatchSpider(url string) *SpiderDispatch {
 	host_url := getHostUrl(url)
 	d := &SpiderDispatch{
-		Ip_list: make([]string, 0, 100),
+		Ip_list: modal.NewQueue(),
 		Wait_spider_queue: modal.NewQueue(),
 		Had_spider_queue: modal.NewQueue(),
 		Error_spider_queue: modal.NewQueue(),
@@ -66,9 +66,18 @@ func (d *SpiderDispatch)AppendUrl(url string) {
 	d.Wait_spider_queue.Push(url)
 }
 
-func (d *SpiderDispatch) HandleNewIpRegistry(ip string) {
-	d.Ip_list = append(d.Ip_list, ip)
-	go d.sendTask(ip)
+func (d *SpiderDispatch) HandleNewIpRegistry(ip string) (code int, msg string){
+	if (!d.Ip_list.HasValue(ip)) {
+		d.Ip_list.Push(ip)
+		go d.sendTask(ip)
+		code = conf.RegisterCodeSuccess
+		msg = conf.RegisterMsgSuccess
+	} else {
+		code = conf.RegisterCodeError
+		msg = conf.RegisterMsgErrorRepeat
+	}
+
+	return code, ip + msg + "task: spider"
 }
 
 func (d *SpiderDispatch) sendTask(ip string) {
