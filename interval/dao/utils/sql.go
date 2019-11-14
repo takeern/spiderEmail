@@ -28,7 +28,7 @@ type SpiderUrl struct {
 func NewDb(url string) (*ModalDb) {
 	modalDb := &ModalDb {}
 	db, err := gorm.Open("mysql", conf.DB_USER + ":" + conf.DB_PSAAWD + "@tcp(" + conf.DB_IP +
-		": " + conf.DB_PORT + ")/" + conf.DB_DATABASE + "?charset=" + conf.DB_CHARSET)
+		":" + conf.DB_PORT + ")/" + conf.DB_DATABASE + "?charset=" + conf.DB_CHARSET)
 	if err != nil {
 		// fmt.Println(err)
 		// return nil

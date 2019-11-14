@@ -7,7 +7,6 @@ import (
 	"spider/interval/dao/utils"
 	"strings"
 	"strconv"
-	"fmt"
 )
 
 type MasterServer struct {
@@ -32,7 +31,7 @@ type spiderInfo struct {
 	HostUrl				string
 	SpiderTimes			int
 	ErroSpider			[]string
-	WaitSpider			[]string
+	HadSpider			[]string
 	IpList				[]string
 }
 
@@ -40,12 +39,18 @@ func (ms *MasterServer)handleIpRegistry(c *gin.Context) {
 	ip := c.ClientIP()
 	ms.IpList[ip] = true
 	taskcode := c.Query("accessTask")
-	fmt.Printf(taskcode)
+	var code int
+	var msg string
+
 	arr := strings.Split(taskcode, "|")
-	fmt.Println(arr)
+
 	if len(arr) == 0 {
-		ms.SpiderDispatch.HandleNewIpRegistry(ip)
-		ms.EmailDispatch.HandleNewIpRegistry(ip)
+		code, msg = ms.SpiderDispatch.HandleNewIpRegistry(ip)
+		codeOther, msgOther := ms.EmailDispatch.HandleNewIpRegistry(ip)
+		if !(code == conf.RegisterCodeSuccess && codeOther == conf.RegisterCodeSuccess) {
+			code = conf.RegisterCodeError
+			msg += msgOther
+		}
 		utils.Log.Info("create all task")
 	} else {
 		for _, item := range arr {
@@ -53,11 +58,11 @@ func (ms *MasterServer)handleIpRegistry(c *gin.Context) {
 			switch m {
 			case conf.SEND_EMAIL:
 				utils.Log.Info("create send email task")
-				ms.EmailDispatch.HandleNewIpRegistry(ip)
+				code, msg = ms.EmailDispatch.HandleNewIpRegistry(ip)
 			break;
 			case conf.SPIDER_EMAIL:
 				utils.Log.Info("create spider email task")
-				ms.SpiderDispatch.HandleNewIpRegistry(ip)
+				code, msg = ms.SpiderDispatch.HandleNewIpRegistry(ip)
 			break;
 			default:
 				utils.Log.Info("unhandle taskcode", item)
@@ -66,18 +71,18 @@ func (ms *MasterServer)handleIpRegistry(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{
-		"code": "10000",
-		"msg": "ip registry success",
+		"code": code,
+		"msg": msg,
 	})
 }
 
 func (ms *MasterServer) getServeInfo(c *gin.Context) {
 	c.JSON(200, gin.H{
-		"code": "10000",
+		"code": conf.RegisterCodeSuccess,
 		"ip_list": ms.IpList,
 		"Goroutines": runtime.NumGoroutine(),
 		"emailInfo": &emailInfo{
-			IpList: ms.EmailDispatch.Ip_list,
+			IpList: ms.EmailDispatch.Ip_list.Q,
 			WaitSpiderLen: len(ms.EmailDispatch.Email_list),
 			SpiderIndex: ms.EmailDispatch.Email_send_index,
 			ErrSpiderLen: len(ms.EmailDispatch.Error_Email_list),
@@ -89,10 +94,10 @@ func (ms *MasterServer) getServeInfo(c *gin.Context) {
 			HadSpiderLen: ms.SpiderDispatch.Had_spider_queue.Len(),
 			ErroSpiderLen: ms.SpiderDispatch.Error_spider_queue.Len(),
 			ErroSpider: ms.SpiderDispatch.Error_spider_queue.Q,
-			WaitSpider: ms.SpiderDispatch.Wait_spider_queue.Q,
+			HadSpider: ms.SpiderDispatch.Had_spider_queue.Q,
 			HostUrl: ms.SpiderDispatch.Host_url,
 			SpiderTimes: ms.SpiderDispatch.Spider_times,
-			IpList: ms.SpiderDispatch.Ip_list,
+			IpList: ms.SpiderDispatch.Ip_list.Q,
 		},
 	})
 }
