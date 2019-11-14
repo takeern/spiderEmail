@@ -1,7 +1,6 @@
 package master
 
 import (
-	"github.com/google/martian/log"
 	"sync"
 	"fmt"
 	"spider/interval/conf"
@@ -10,7 +9,7 @@ import (
 	"time"
 	pb "spider/interval/serve/grpc"
 	"spider/interval/dao/utils"
-	"google.golang.org/grpc"
+	// "google.golang.org/grpc"
 )
 
 var (
@@ -91,18 +90,6 @@ func (d *EmailDispatch) InjectUrl(url string) {
 func (d *EmailDispatch) HandleNewIpRegistry(ip string) {
 	fmt.Println(ip)
 	go sendTask(ip, d.send_user_index, d)
-	// go func ()  {
-	// 	fmt.Println("test")
-	// 	for {
-	// 		for a := 0; a < 10; a++ {
-	// 			continue
-	// 			d.mu.Lock()
-	// 			fmt.Printf("a 的值为: %d\n", a)
-	// 			d.mu.Unlock()
-	// 		}
-	// 		time.Sleep((conf.WAIT_SEND_EMAIL_TIME + time.Duration(rand.Intn(3 * 60 * 60))) * time.Second)
-	// 	}
-	// }()
 }
 
 /*
@@ -168,23 +155,3 @@ func sendTask(ip string, index int, d *EmailDispatch) {
 		time.Sleep((conf.WAIT_SEND_EMAIL_TIME + time.Duration(rand.Intn(3 * 60 * 60))) * time.Second)
 	}
 }
-
-
-func CreateConn(ip string) (pb.TaskClient, error) {
-	
-	conn, err := grpc.Dial(ip + ":" + conf.SLAVE_PORT, grpc.WithInsecure())
-	if err != nil {
-		log.Errorf("connet to slave node failed, node ip: %s, err: %v", ip, err)
-		return nil ,err
-	}
-	c := pb.NewTaskClient(conn)
-	return c, err
-}
-// func createServe()  {
-// 	http.HandleFunc("/register", sayhelloName)
-// }
-
-// // handle 其他 ip 注册
-// func handleRegister(w http.ResponseWriter, r *http.Request)  {
-	
-// }
