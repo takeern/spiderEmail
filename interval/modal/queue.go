@@ -5,9 +5,9 @@ type Queue struct {
 	length	int
 }
 
-func NewQueue() *Queue {
+func NewQueue(len int) *Queue {
 	queue := &Queue{
-		Q: make([]string, 0, 2000),
+		Q: make([]string, 0, len),
 	}
 	return queue
 }
@@ -25,6 +25,15 @@ func (q *Queue) Shift() (string) {
 	item := q.Q[0]
 	q.Q = q.Q[1:]
 	return item
+}
+
+func (q *Queue) Remove(v string) {
+	for i, value := range q.Q {
+		if (value == v) {
+			q.Q = append(q.Q[:i], q.Q[i+1:]...)
+			break;
+		}
+	}
 }
 
 func (q *Queue) Len() (int) {

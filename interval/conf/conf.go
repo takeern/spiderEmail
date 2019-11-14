@@ -26,6 +26,19 @@ const MASTER_TOKEN = "random"
 const SLAVE_PORT = "6011"
 
 const DB_URL = "http://wwwijetchorg/"
+const SPIDER_URL = "http://dpi-proceedings.com/index.php/dtem/article/download/31137/29718"
+
+const (
+	RegisterCodeSuccess = 0
+	RegisterMsgSuccess = " register Success "
+	RegisterCodeError = -1
+	RegisterMsgErrorRepeat = " this ip Repeat registered "
+)
+
+const (
+	Retry_Spider_Times = 20
+	Retry_Send_Email_Times = 10
+)
 
 var SendList = [...][4]SendInfo{
 	{
@@ -53,6 +66,23 @@ var SendList = [...][4]SendInfo{
 			Ac: "publishhouse@sina.com",
 			Ps: "9822fc8955387b92",
 			Host: "smtp.sina.com:587",
+		},
+	},
+	{
+		{
+			Ac: "yuyuanzhou2010@sina.com",
+			Ps: "yuyuanzhou2010",
+			Host: "smtp.sina.com:587",
+		},
+		{
+			Ac: "suncangjun2010@163.com",
+			Ps: "Abcd123",
+			Host: "smtp.163.com:25",
+		},
+		{
+			Ac: "lijinman2010@126.com",
+			Ps: "Abcd123",
+			Host: "smtp.126.com:25",
 		},
 	},
 }
