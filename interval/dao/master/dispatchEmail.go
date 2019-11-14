@@ -70,6 +70,7 @@ func (d *EmailDispatch) HandleNewIpRegistry(ip string) (code int, msg string) {
 
 func (d *EmailDispatch) closeIp(ip string) {
 	d.Ip_list.Remove(ip)
+	d.Close_ip_list.Push(ip)
 	utils.Log.Info("remove connect ip: " + ip + "task: email")
 }
 
