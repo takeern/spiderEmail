@@ -1,4 +1,5 @@
 /log
+/conf
 spider
 .idea
 go.sum
