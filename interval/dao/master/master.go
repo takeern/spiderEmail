@@ -78,7 +78,7 @@ func (ms *MasterServer)handleIpRegistry(c *gin.Context) {
 
 func (ms *MasterServer) getServeInfo(c *gin.Context) {
 	c.JSON(200, gin.H{
-		"code": "10000",
+		"code": conf.RegisterCodeSuccess,
 		"ip_list": ms.IpList,
 		"Goroutines": runtime.NumGoroutine(),
 		"emailInfo": &emailInfo{

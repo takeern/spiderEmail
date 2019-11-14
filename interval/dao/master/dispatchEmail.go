@@ -2,7 +2,6 @@ package master
 
 import (
 	"sync"
-	"fmt"
 	"spider/interval/conf"
 	"math/rand"
 	"context"
@@ -10,7 +9,6 @@ import (
 	pb "spider/interval/serve/grpc"
 	"spider/interval/dao/utils"
 	"spider/interval/modal"
-	// "google.golang.org/grpc"
 )
 
 var (
@@ -18,20 +16,22 @@ var (
 )
 
 type EmailDispatch struct {
-	mu      	sync.Mutex // guards balance
-	c			pb.TaskClient
-	Ip_list		*modal.Queue
-	Email_list 	[]string
-	Error_Email_list	[]string
-	Success_Email_list	[]string
-	Email_send_index	int
-	send_user_index		int
-	modalDb		*utils.ModalDb
+	mu      				sync.Mutex // guards balance
+	c						pb.TaskClient
+	Ip_list					*modal.Queue
+	Close_ip_list			*modal.Queue
+	Email_list 				[]string
+	Error_Email_list		[]string
+	Success_Email_list		[]string
+	Email_send_index		int
+	send_user_index			int
+	modalDb					*utils.ModalDb
 }	
 
 func CreateEmailDispatch(url string) *EmailDispatch {
 	d := &EmailDispatch{
-		Ip_list: modal.NewQueue(),
+		Ip_list: modal.NewQueue(100),
+		Close_ip_list: modal.NewQueue(100),
 		Email_list: make([]string, 0, 3000),
 		Error_Email_list: make([]string, 0, 3000),
 		Success_Email_list: make([]string, 0, 3000),
@@ -68,31 +68,41 @@ func (d *EmailDispatch) HandleNewIpRegistry(ip string) (code int, msg string) {
 	return code, ip + msg + "task: send email"
 }
 
+func (d *EmailDispatch) closeIp(ip string) {
+	d.Ip_list.Remove(ip)
+	utils.Log.Info("remove connect ip: " + ip + "task: email")
+}
+
 /*
  * ip 当前连接地址
  * index 当前使用第几套send list 模型
  */
 func sendTask(ip string, index int, d *EmailDispatch) {
+	var sendModalIndex [4]int
+	var error_spider_times int
 	c, err := CreateConn(ip)
 	Aclen := len(conf.SendList[0])
-	fmt.Println(Aclen)
-	var sendModalIndex [4]int
+	acList := conf.SendList[index]
+
 	if err != nil {
-		fmt.Println(err)
+		d.closeIp(ip)
 		utils.Log.Error("connect error", ip, err)
 		return
 	}
+
 	if (index > Aclen - 1) {
+		d.closeIp(ip)
 		utils.Log.Error("outside sendlist", index)
 		return
 	}
-	acList := conf.SendList[index]
+
 	for {
 		for i, item := range acList {
 			
 			if (d.Email_send_index > len(d.Email_list) - 1) {
 				utils.Log.Error("email send complete", d.Email_send_index)
-				continue
+				d.closeIp(ip)
+				return
 			}
 
 			d.mu.Lock()
@@ -108,16 +118,23 @@ func sendTask(ip string, index int, d *EmailDispatch) {
 				},
 			}
 			resp, err := c.HandleTask(context.Background(), req)
-			fmt.Println(resp)
 			d.Email_send_index++
+
 			if err != nil || resp.Code != 10000 {
 				d.Error_Email_list = append(d.Error_Email_list, email)
 				utils.Log.Error("grpc: send email error %v, ac: %s, ", &resp.ErrorMsg, item.Ac, email, i)
 				d.mu.Unlock()
+				error_spider_times ++
 				continue
 			} else {
 				// 执行成功
 				utils.Log.Info("send email: success", item.Ac, email, i)
+
+				error_spider_times --
+				if (error_spider_times < 0) {
+					error_spider_times = 0
+				}
+
 				d.Success_Email_list = append(d.Success_Email_list, email)
 				d.modalDb.UpdateStatus(email, true)
 			}

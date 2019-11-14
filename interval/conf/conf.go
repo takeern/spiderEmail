@@ -35,6 +35,11 @@ const (
 	RegisterMsgErrorRepeat = " this ip Repeat registered "
 )
 
+const (
+	Retry_Spider_Times = 20
+	Retry_Send_Email_Times = 10
+)
+
 var SendList = [...][4]SendInfo{
 	{
 		// {
