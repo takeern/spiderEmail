@@ -32,6 +32,7 @@ type spiderInfo struct {
 	SpiderTimes			int
 	ErroSpider			[]string
 	HadSpider			[]string
+	Wait_spider			[]string
 	IpList				[]string
 }
 
@@ -95,6 +96,7 @@ func (ms *MasterServer) getServeInfo(c *gin.Context) {
 			ErroSpiderLen: ms.SpiderDispatch.Error_spider_queue.Len(),
 			ErroSpider: ms.SpiderDispatch.Error_spider_queue.Q,
 			HadSpider: ms.SpiderDispatch.Had_spider_queue.Q,
+			Wait_spider: ms.SpiderDispatch.Wait_spider_queue.Q,
 			HostUrl: ms.SpiderDispatch.Host_url,
 			SpiderTimes: ms.SpiderDispatch.Spider_times,
 			IpList: ms.SpiderDispatch.Ip_list.Q,
