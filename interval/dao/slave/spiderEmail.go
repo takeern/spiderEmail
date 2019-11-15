@@ -15,7 +15,6 @@ var (
 	client http.Client
 )
 
-
 func init() {
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	client = http.Client{
@@ -66,6 +65,8 @@ func drawEmail(html string) []string {
 
 // 提取页面url
 func drawUrl(html string, host_url string) []string {
+	reScrpit := regexp.MustCompile(`<script[^>]*?>(?:.|\n)*?<\/script>`)
+	html = string(reScrpit.ReplaceAll([]byte(html), []byte("")))
 	re := regexp.MustCompile(`<a[^>]*href[=\"\'\s]+([^\"\']*)[\"\']?[^>]*>`)
 	params := re.FindAllSubmatch([]byte(html), -1)
 	urls := make([]string, 0, 100)
