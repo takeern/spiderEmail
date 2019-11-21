@@ -101,7 +101,7 @@ func editUlr(url string, host_url string) (string) {
 			if strings.HasPrefix(url, "/") {
 				return host_url + url
 			} else {
-				return host_url + '/' + url
+				return host_url + "/" + url
 			}
 		}
 	}
