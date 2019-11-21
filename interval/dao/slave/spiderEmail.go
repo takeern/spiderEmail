@@ -9,6 +9,7 @@ import (
 	"errors"
 	"spider/interval/conf"
 	"code.sajari.com/docconv"
+	"strings"
 )
 
 var (
@@ -97,7 +98,11 @@ func editUlr(url string, host_url string) (string) {
 		if (ok) {
 			return ""
 		} else {
-			return host_url + url
+			if strings.HasPrefix(url, "/") {
+				return host_url + url
+			} else {
+				return host_url + '/' + url
+			}
 		}
 	}
 }
