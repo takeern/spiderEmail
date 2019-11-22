@@ -10,6 +10,7 @@ message HandleTaskReq {
     int32 TaskCode = 1;
     EmailInfo EmailInfo = 2;
     string SpiderUrl = 3;
+    SyncData SyncData = 4;
 }
 
 message HandleTaskResp {
@@ -29,4 +30,27 @@ message EmailInfo {
 message SpiderInfo {
     repeated string Urls = 1;
     repeated string Emails = 2;
+}
+
+message SyncData {
+    SyncSpiderData SyncSpiderData = 1;
+    SyncEmailData SyncEmailData = 2;
+    int32 SyncId = 3;
+}
+
+message SyncSpiderData {
+    repeated string IpList = 1;
+    repeated string CloseIpList = 2;
+    repeated string WaitSpiderQueue = 3;
+    repeated string HadSpiderQueue = 4;
+    repeated string ErrorSpiderQueue = 5;
+    // repeated string CacheEmail = 6;
+    map<string, string> CacheEmail = 6;
+}
+
+message SyncEmailData {
+    repeated string IpList = 1;
+    repeated string EmailList = 2;
+    repeated string SuccessEmailList = 3;
+    repeated string EmailSendIndex = 4;
 }

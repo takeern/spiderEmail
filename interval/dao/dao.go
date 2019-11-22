@@ -11,11 +11,7 @@ import (
 )
 
 func CreateMasterServer() {
-	ms := &master.MasterServer{
-		IpList:        make(map[string]bool),
-		EmailDispatch: master.CreateEmailDispatch(conf.DB_URL),
-		SpiderDispatch: master.CreateDispatchSpider(conf.SPIDER_URL),
-	}
+	ms := master.NewMaterServe()
 
 	ms.StarServer()
 }
