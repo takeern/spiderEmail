@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"context"
+	// "fmt"
 
 	pb "spider/interval/serve/grpc"
 	"spider/interval/dao/utils"
@@ -110,6 +111,7 @@ func (d *SpiderDispatch) InjectInitData(data *pb.SpiderAllData) {
 func (d *SpiderDispatch) InjectRecordData(records []*pb.SpiderRecordData)  {
 	for _, item := range records {
 		d.handleResp(item.TargetUrl, item.Resp, nil, 0)
+		d.Data.Wait_spider_queue.Shift()
 	}
 }
 

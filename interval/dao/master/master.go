@@ -68,11 +68,10 @@ func NewMaterServe(sleep bool) *MasterServer {
 		},
 	}
 
-	// if !sleep {
-	// 	ms.StarServer()
-	// }
-
-	ms.StarServer()
+	if !sleep {
+		ms.StarServer()
+	}
+	
 	return ms
 }
 
@@ -146,7 +145,11 @@ func (ms *MasterServer) StarServer() {
 	r := gin.Default()
 	r.GET("/register", ms.handleIpRegistry)
 	r.GET("/getServeInfo", ms.getServeInfo)
-	r.Run(":" + conf.HOST_PORT)
+	if ms.status.sleep {
+		r.Run(":" + conf.SLAVE_PORT)
+	} else {
+		r.Run(":" + conf.HOST_PORT)
+	}
 }
 
 func (ms *MasterServer) getServeInfo(c *gin.Context) {
@@ -183,18 +186,18 @@ func (ms *MasterServer) HandleReq(req *pb.HandleTaskReq) *pb.HandleTaskResp{
 	}
 	switch req.TaskCode {
 	case conf.SYNC_DATA:
-		list := ms.status.syncIdHistory
 		if req.SyncData.SyncType == conf.SYNC_ALL {
 			// 同步所有数据, 清理所有数据
 			utils.Log.Info("sync all data")
-			list = list[0:0]
-			list = append(list, req.SyncData.SyncId)
+			ms.status.syncIdHistory = ms.status.syncIdHistory[0:0]
+			ms.status.syncIdHistory = append(ms.status.syncIdHistory, req.SyncData.SyncId)
 			ms.SpiderDispatch.InjectInitData(req.SyncData.SpiderSyncData.SpiderAllData)
 		} else if req.SyncData.SyncType == conf.SYNC_RECORD {
 			// 同步 record 数据
-			if list[len(list) - 1] == req.SyncData.SyncLastId {	// 保证 顺序一致性
+			i := len(ms.status.syncIdHistory) - 1
+			if i >= 0 && ms.status.syncIdHistory[i] == req.SyncData.SyncLastId {	// 保证 顺序一致性
 				utils.Log.Info("sync record data")
-				list = append(list, req.SyncData.SyncId)
+				ms.status.syncIdHistory = append(ms.status.syncIdHistory, req.SyncData.SyncId)
 				ms.SpiderDispatch.InjectRecordData(req.SyncData.SpiderSyncData.SpiderRecordData)
 			} else {
 				resp.Code = conf.ERROR_SYNCDATA_TASK
