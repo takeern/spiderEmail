@@ -142,3 +142,24 @@ func sendTask(ip string, index int, d *EmailDispatch, c pb.TaskClient) {
 		time.Sleep((conf.WAIT_SEND_EMAIL_TIME + time.Duration(rand.Intn(3 * 60 * 60))) * time.Second)
 	}
 }
+
+// func (d *EmailDispatch) handleResp(resp, err error) (status bool) {
+// 	if err != nil || resp.Code != 10000 {
+// 		d.Error_Email_list = append(d.Error_Email_list, email)
+// 		utils.Log.Error("grpc: send email error %v, ac: %s, ", &resp.ErrorMsg, item.Ac, email, i)
+// 		d.mu.Unlock()
+// 		error_spider_times ++
+// 		continue
+// 	} else {
+// 		// 执行成功
+// 		utils.Log.Info("send email: success", item.Ac, email, i)
+
+// 		error_spider_times --
+// 		if (error_spider_times < 0) {
+// 			error_spider_times = 0
+// 		}
+
+// 		d.Success_Email_list = append(d.Success_Email_list, email)
+// 		d.modalDb.UpdateStatus(email, true)
+// 	}
+// }

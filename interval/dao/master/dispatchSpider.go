@@ -8,11 +8,9 @@ import (
 	"net/http"
 	"strings"
 	"context"
-	"fmt"
 
 	pb "spider/interval/serve/grpc"
 	"spider/interval/dao/utils"
-	// "google.golang.org/grpc"
 	"spider/interval/conf"
 	"spider/interval/modal"
 )
@@ -30,20 +28,14 @@ type SpiderData struct {
 	Spider_times 			int
 }
 
-type SyncData struct {
-	Urls					*modal.Queue
-	Emails					*modal.Queue
-	Ip_list					*modal.Queue
-	Had_spider_queue		*modal.Queue
-	Close_ip_list			*modal.Queue
-}
-
 type SpiderDispatch struct {
 	mu      				sync.Mutex
 	c						pb.TaskClient
 	modalDb 				*utils.ModalDb
 	Data					*SpiderData
 	changeData				*SpiderData
+	recordData				[]*pb.SpiderRecordData
+	sleep					bool
 }
 
 func init() {
@@ -62,13 +54,19 @@ func initSpiderData(host_url  string) *SpiderData {
 	}
 }
 
-func CreateDispatchSpider(url string) *SpiderDispatch {
-	host_url := getHostUrl(url)
+// 创建 spider 分发器
+// 睡眠状态下 不开启db
+func CreateSpiderDispatch(url string, sleep bool) *SpiderDispatch {
 	d := &SpiderDispatch{
-		Data: initSpiderData(host_url),
-		modalDb: utils.NewDb(host_url),
+		sleep: sleep,
+		recordData: make([]*pb.SpiderRecordData, 0, 1000),
 	}
-	d.AppendUrl(url)
+	if !sleep {
+		host_url := getHostUrl(url)
+		d.Data = initSpiderData(host_url)
+		d.modalDb = utils.NewDb(host_url)
+		d.Data.Wait_spider_queue.Push(url)
+	}
 	return d
 }
 
@@ -81,10 +79,6 @@ func getHostUrl(url string) string {
 		url += "/"
 	}
 	return strings.Replace(url, ".", "", -1)
-}
-
-func (d *SpiderDispatch)AppendUrl(url string) {
-	d.Data.Wait_spider_queue.Push(url)
 }
 
 func (d *SpiderDispatch) HandleNewIpRegistry(ip string, c pb.TaskClient) (code int, msg string){
@@ -101,6 +95,24 @@ func (d *SpiderDispatch) HandleNewIpRegistry(ip string, c pb.TaskClient) (code i
 	return code, ip + msg + "task: spider"
 }
 
+// 注入初始化数据
+func (d *SpiderDispatch) InjectInitData(data *pb.SpiderAllData) {
+	d.Data = initSpiderData(data.HostUrl)
+	d.Data.Cache_email = data.CacheEmail
+	d.Data.Ip_list.PushList(data.IpList)
+	d.Data.Close_ip_list.PushList(data.CloseIpList)
+	d.Data.Wait_spider_queue.PushList(data.WaitSpiderQueue)
+	d.Data.Had_spider_queue.PushList(data.HadSpiderQueue)
+	d.Data.Error_spider_queue.PushList(data.ErrorSpiderQueue)
+}
+
+// 注入每次记录的数据
+func (d *SpiderDispatch) InjectRecordData(records []*pb.SpiderRecordData)  {
+	for _, item := range records {
+		d.handleResp(item.TargetUrl, item.Resp, nil, 0)
+	}
+}
+
 func (d *SpiderDispatch) closeIp(ip string) {
 	d.Data.Ip_list.Remove(ip)
 	d.Data.Close_ip_list.Push(ip)
@@ -108,57 +120,33 @@ func (d *SpiderDispatch) closeIp(ip string) {
 }
 
 func (d *SpiderDispatch) sendTask(ip string, c pb.TaskClient) {
-	var error_spider_times int
+	var errorTimes int
 
 	for {
-		if (error_spider_times > conf.Retry_Spider_Times) {
+		if (errorTimes > conf.Retry_Spider_Times) {
 			d.closeIp(ip)
 			return
 		}
 		d.mu.Lock()
 		d.Data.Spider_times ++
 		if (d.Data.Wait_spider_queue.Len() != 0) {
-			next_url := d.Data.Wait_spider_queue.Shift()
-			utils.Log.Info("next Url", next_url)
+			targetUrl := d.Data.Wait_spider_queue.Shift()
+			utils.Log.Info("spider targetUrl", targetUrl)
 			req := &pb.HandleTaskReq{
 				TaskCode: conf.SPIDER_EMAIL,
-				SpiderUrl: next_url,
-			}
-
-			resp, err := c.HandleTask(context.Background(), req)
-			if err != nil || resp.Code != 10000 {
-				d.Data.Error_spider_queue.Push(next_url)
-				msg := ""
-				if resp != nil {
-					msg = resp.ErrorMsg
-				}
-				fmt.Println(resp)
-				error_spider_times ++
-				utils.Log.Error("grpc: spider url error ", next_url, msg)
-			} else {
-				// 爬取成功
-				error_spider_times --
-				if (error_spider_times < 0) {
-					error_spider_times = 0
-				}
-				d.Data.Had_spider_queue.Push(next_url)
-				utils.Log.Info("spider url: success", next_url)
-
-				for _, url := range resp.SpiderInfo.Urls {
-					if (!d.Data.Wait_spider_queue.HasValue(url) && !d.Data.Had_spider_queue.HasValue(url) && !d.Data.Error_spider_queue.HasValue(url)) {	// 检查是否已爬去过
-						d.Data.Wait_spider_queue.Push(url)
-					}
-				}
-				for _, email := range resp.SpiderInfo.Emails {
-					_, ok := d.Data.Cache_email[email]
-					if !ok {
-						d.modalDb.InsertData(next_url, email)
-						d.Data.Cache_email[email] = next_url
-					}
-				}
+				SpiderUrl: targetUrl,
 			}
 			d.mu.Unlock()
+
+			resp, err := c.HandleTask(context.Background(), req)
+			d.recordData = append(d.recordData, &pb.SpiderRecordData{
+				TargetUrl: targetUrl,
+				Resp: resp,
+			})
+			errorTimes = d.handleResp(targetUrl, resp, err, errorTimes)
+
 		} else {
+			d.mu.Unlock()
 			d.closeIp(ip)
 			utils.Log.Info("spider over")
 			return
@@ -168,10 +156,55 @@ func (d *SpiderDispatch) sendTask(ip string, c pb.TaskClient) {
 	}
 }
 
+// 处理 grpc resp
+// 将 slave 节点给的 爬取数据, 存储到内存中
+func (d *SpiderDispatch) handleResp(targetUrl string, resp *pb.HandleTaskResp, err error, errorTimes int) (times int){
+	d.mu.Lock()
+	if err != nil || resp.Code != 10000 {
+		d.Data.Error_spider_queue.Push(targetUrl)
+		msg := ""
+		if resp != nil {
+			msg = resp.ErrorMsg
+		}
+		errorTimes ++
+		utils.Log.Error("grpc: spider url error ", targetUrl, msg)
+	} else {
+		// 爬取成功
+		errorTimes --
+		if (errorTimes < 0) {
+			errorTimes = 0
+		}
+		d.Data.Had_spider_queue.Push(targetUrl)
+		utils.Log.Info("spider url: success", targetUrl)
+
+		for _, url := range resp.SpiderInfo.Urls {
+			if (!d.Data.Wait_spider_queue.HasValue(url) && !d.Data.Had_spider_queue.HasValue(url) && !d.Data.Error_spider_queue.HasValue(url)) {	// 检查是否已爬去过
+				d.Data.Wait_spider_queue.Push(url)
+			}
+		}
+		for _, email := range resp.SpiderInfo.Emails {
+			_, ok := d.Data.Cache_email[email]
+			if !ok {
+				if !d.sleep {
+					d.modalDb.InsertData(targetUrl, email)
+				}
+				d.Data.Cache_email[email] = targetUrl
+			}
+		}
+	}
+	d.mu.Unlock()
+	return errorTimes
+}
+
 func (d *SpiderDispatch) GetAllData() (res SpiderData){
 	return *d.Data
 }
 
-func (d *SpiderDispatch) GetSyncData() (res SpiderData){
-
+func (d *SpiderDispatch) GetSyncData() (res []*pb.SpiderRecordData){
+	c := make([]*pb.SpiderRecordData, 1, 1000)
+	copy(c, d.recordData)
+	utils.Log.Info("record sync data d.recordData： ", len(d.recordData))
+	d.recordData = d.recordData[0:0]
+	utils.Log.Info("record sync data c： ", len(c))
+	return c
 }
