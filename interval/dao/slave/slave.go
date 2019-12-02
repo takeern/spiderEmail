@@ -1,26 +1,15 @@
 package slave
 
 import (
-	"context"
-	"crypto/tls"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"spider/interval/conf"
+	"spider/interval/dao/utils"
 
 	pb "spider/interval/serve/grpc"
 )
 
-type SlaveServer struct{}
-
-func init() {
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-}
-
-func (s *SlaveServer) HandleTask(ctx context.Context, req *pb.HandleTaskReq) (*pb.HandleTaskResp, error) {
-	resp := selectTaskRun(req)
-	return resp, nil
-}
 
 func RegisterIp(times int) {
 	if (times > conf.RETRY_REGISTER_TIMES) {
@@ -51,9 +40,10 @@ func RegisterIp(times int) {
  * 1000 发送 email
  * 1001 爬取页面 email
  */
-func selectTaskRun(req *pb.HandleTaskReq) (*pb.HandleTaskResp) {
+func HandleReq(req *pb.HandleTaskReq) (*pb.HandleTaskResp) {
 	resp := &pb.HandleTaskResp{
 		SpiderInfo: &pb.SpiderInfo{},
+		Code: conf.SUCCESS_TASK,
 	}
 	switch req.TaskCode {
 	case conf.SEND_EMAIL:
@@ -65,10 +55,10 @@ func selectTaskRun(req *pb.HandleTaskReq) (*pb.HandleTaskResp) {
 			conf.EmailModalList[req.EmailInfo.ModalIndex],
 			"html")
 		if err != nil {
-			resp.Code = 10001
+			resp.Code = conf.ERROR_EMAIL_TASK
 			resp.ErrorMsg = err.Error()
 		} else {
-			resp.Code = 10000
+			resp.Code = conf.SUCCESS_TASK
 		}
 
 		break
@@ -76,16 +66,31 @@ func selectTaskRun(req *pb.HandleTaskReq) (*pb.HandleTaskResp) {
 		log.Println(resp)
 		err, emails, urls := SpiderEmail(req.SpiderUrl, 0)
 		if err != nil {
-			resp.Code = 10002
+			resp.Code = conf.ERROR_SPIDER_TASK
 			resp.ErrorMsg = err.Error()
 		} else {
-			resp.Code = 10000
+			resp.Code = conf.SUCCESS_TASK
 			resp.SpiderInfo.Emails = emails
 			resp.SpiderInfo.Urls = urls
 		}
 		break
+	case conf.SYNC_DATA:
+		utils.Log.Info("sync get data", req)
+		switch req.SyncData.SyncType {
+			case conf.SYNC_ALL:
+				break;
+			case conf.SYNC_RECORD:
+				log.Println("req.SyncData.SpiderSyncData 长度", len(req.SyncData.SpiderSyncData.SpiderRecordData))
+				for _, v := range req.SyncData.SpiderSyncData.SpiderRecordData {
+					log.Println("v: ", v)
+				}
+				break;
+			default:
+				break;
+		}
+		break;
 	default:
-		resp.Code = 10003
+		resp.Code = conf.ERROR_UNAHDNLE_TASK
 		resp.ErrorMsg = "unhandle task code"
 		break
 	}
