@@ -10,6 +10,7 @@ import (
 	"spider/interval/conf"
 	"code.sajari.com/docconv"
 	"strings"
+	"fmt"
 )
 
 var (
@@ -31,22 +32,20 @@ func SpiderEmail(url string, times int) (error, []string, []string) {
 	if (times > conf.HTTP_TRY_REQUEST_TIMES) {
 		return errors.New("too many try"), emails, urls
 	}
-	res, err := client.Get(url)
+	res, err := http.Get(url)
 	if err != nil {
 		times ++
 		return SpiderEmail(url, times)
 	} else {
 		defer res.Body.Close()
-		isPDF, _ := regexp.MatchString(`pdf`, res.Header["Content-Type"][0])
-		if isPDF {
-			html, _, _ = docconv.ConvertPDF(res.Body)
-		} else {
-			Body, _ := ioutil.ReadAll(res.Body)
-			html = string(Body)
-		}
 	}
 
-	emails = drawEmail(html)
+	pdf, _, _ := docconv.ConvertPDF(res.Body)
+	pdfEmails := drawEmail(pdf)
+	Body, _ := ioutil.ReadAll(res.Body)
+	html = string(Body)
+	emails = append(drawEmail(html), pdfEmails...)
+
 	re := regexp.MustCompile(`(http|https):\/\/?([^/]*)`)
 	host_url := string(re.Find([]byte(url)))
 	urls = drawUrl(html, host_url)
