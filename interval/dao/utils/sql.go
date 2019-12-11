@@ -30,9 +30,6 @@ func NewDb(url string) (*ModalDb) {
 	db, err := gorm.Open("mysql", conf.DB_USER + ":" + conf.DB_PSAAWD + "@tcp(" + conf.DB_IP +
 		":" + conf.DB_PORT + ")/" + conf.DB_DATABASE + "?charset=" + conf.DB_CHARSET)
 	if err != nil {
-		// fmt.Println(err)
-		// return nil
-		// 感觉这个地方直接退出比较好，毕竟是初始化失败了
 		log.Fatalf("open mysql failed: %v", err)
 	}
 
