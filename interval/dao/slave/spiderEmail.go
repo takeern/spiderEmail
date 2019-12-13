@@ -10,7 +10,6 @@ import (
 	"spider/interval/conf"
 	"code.sajari.com/docconv"
 	"strings"
-	"fmt"
 )
 
 var (
