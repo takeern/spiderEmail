@@ -18,7 +18,7 @@ var MASTER_IP = [...]string{
 }
 
 const DB_URL = "http://wwwijetchorg/"
-const SPIDER_URL = "http://www.ivypub.org/ERF/download/54421.shtml"   // http://www.jissr.net/src/assets/pdf/2019-6-11_1.pdf  http://www.ivypub.org/ERF/download/54421.shtml
+const SPIDER_URL = "http://www.ivypub.org/index.shtml"   // http://www.jissr.net/src/assets/pdf/2019-6-11_1.pdf  http://www.ivypub.org/ERF/download/54421.shtml
 
 const (
 	RegisterCodeSuccess = 0

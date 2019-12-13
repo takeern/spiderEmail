@@ -10,6 +10,7 @@ import (
 	"spider/interval/conf"
 	"code.sajari.com/docconv"
 	"strings"
+	"bytes"
 )
 
 var (
@@ -39,10 +40,13 @@ func SpiderEmail(url string, times int) (error, []string, []string) {
 		defer res.Body.Close()
 	}
 
-	pdf, _, _ := docconv.ConvertPDF(res.Body)
-	pdfEmails := drawEmail(pdf)
+
+	
 	Body, _ := ioutil.ReadAll(res.Body)
 	html = string(Body)
+	reader := bytes.NewReader(Body)
+	pdf, _, _ := docconv.ConvertPDF(reader)
+	pdfEmails := drawEmail(pdf)
 	emails = append(drawEmail(html), pdfEmails...)
 
 	re := regexp.MustCompile(`(http|https):\/\/?([^/]*)`)
