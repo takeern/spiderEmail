@@ -34,9 +34,10 @@ type SpiderDispatch struct {
 	c						pb.TaskClient
 	modalDb 				*utils.ModalDb
 	Data					*SpiderData
-	changeData				*SpiderData
 	recordData				[]*pb.SpiderRecordData
 	sleep					bool
+	ms						*MasterServer
+	isExit					bool
 }
 
 func init() {
@@ -57,16 +58,19 @@ func initSpiderData(host_url  string) *SpiderData {
 
 // 创建 spider 分发器
 // 睡眠状态下 不开启db
-func CreateSpiderDispatch(url string, sleep bool) *SpiderDispatch {
+func CreateSpiderDispatch(url string, sleep bool, server *MasterServer) *SpiderDispatch {
 	d := &SpiderDispatch{
 		sleep: sleep,
 		recordData: make([]*pb.SpiderRecordData, 0, 1000),
+		ms: server,
+		isExit: false,
 	}
 	if !sleep {
 		host_url := getHostUrl(url)
 		d.Data = initSpiderData(host_url)
 		d.modalDb = utils.NewDb(host_url)
 		d.Data.Wait_spider_queue.Push(url)
+		d.initIpTask()
 	}
 	return d
 }
@@ -80,6 +84,21 @@ func getHostUrl(url string) string {
 		url += "/"
 	}
 	return strings.Replace(url, ".", "", -1)
+}
+
+// 遍历当前已有 ip 建立连接，发送任务
+func (d *SpiderDispatch) initIpTask() {
+	conns := d.ms.GetConnClients()
+	for ip, ok := range d.ms.GetIplist("spider") {
+		if ok {
+			c, ok := conns[ip]
+			if ok {
+				d.HandleNewIpRegistry(ip, c)
+			} else {
+				utils.Log.Warn(" dispatch create error, iplist has value, but conns not ip: %r", ip)
+			}
+		}
+	}
 }
 
 func (d *SpiderDispatch) HandleNewIpRegistry(ip string, c pb.TaskClient) (code int, msg string){
@@ -125,7 +144,7 @@ func (d *SpiderDispatch) sendTask(ip string, c pb.TaskClient) {
 	var errorTimes int
 
 	for {
-		if (errorTimes > conf.Retry_Spider_Times) {
+		if (errorTimes > conf.Retry_Spider_Times || d.isExit) {
 			d.closeIp(ip)
 			return
 		}
@@ -155,6 +174,15 @@ func (d *SpiderDispatch) sendTask(ip string, c pb.TaskClient) {
 		}
 
 		time.Sleep(conf.WAIT_SPIDER_TIME * time.Second)
+	}
+}
+
+func (d *SpiderDispatch) sendTask() {
+	var conns map[string]pb.TaskClient	// 连接句柄
+	for {
+		conns = d.ms.getConns()
+		waitTime = conf.WAIT_SPIDER_TIME / len(iplist)
+		time.Sleep(conf.WAIT_SPIDER_TIME * time.Second) // 睡眠时间
 	}
 }
 
@@ -209,4 +237,38 @@ func (d *SpiderDispatch) GetSyncData() (res []*pb.SpiderRecordData){
 	d.recordData = d.recordData[0:0]
 	utils.Log.Info("record sync data c： ", len(c))
 	return c
+}
+
+// 关闭 爬虫任务
+func (d *SpiderDispatch) Exit() {
+	d.isExit = true
+}
+
+// 通过 grpc 发送 task
+func (d *SpiderDispatch) HandleSend(ctx context.Context, in <-chan pb.HandleTaskReq, out chan<- *pb.HandleTaskResp) {
+
+}
+
+func (d *SpiderDispatch) getConns () []pb.TaskClient {
+	allConns := d.ms.GetConnClients()
+	ip = d.ms.GetIplist("spider")
+	list := make([]string, 0, len(ip))
+	conns := make([]pb.TaskClient, 0, len(allConns))
+	for k, ok := range ip {
+		if ok {
+			list = append(list, k)
+		}
+	}
+	sort.Strings(list)
+
+	for _, ip := range list {
+		grpcC, ok := allConns[ip]
+		if ok {
+			conns = append(conns, grpcC)
+		} else {
+			utils.Log.Warn(" dispatch create error, iplist has value, but conns not ip: %r", ip)
+		}
+	}
+
+	return conns
 }

@@ -23,8 +23,14 @@ const SPIDER_URL = "http://www.ivypub.org/index.shtml"   // http://www.jissr.net
 const (
 	RegisterCodeSuccess = 0
 	RegisterMsgSuccess = " register Success "
+	CreateSpiderMsgSuccess = " create Spider Success "
+	DeleteSpiderMsgSuccess = " delete Spider Success "
 	RegisterCodeError = -1
 	RegisterMsgErrorRepeat = " this ip Repeat registered "
+	CreateSpiderURLError = " create spider task error "
+	CreateSpiderURLRepeat = " create spider url Repeat "
+	DeleteSpiderURLError = " delete spider task error no such url"
+	GetSpiderInfoError = " can not find this url "
 )
 
 const (
