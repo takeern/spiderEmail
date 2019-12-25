@@ -2,6 +2,7 @@ package master
 
 import (
 	"sync"
+	"context"
 	// "fmt"
 
 	"spider/interval/conf"

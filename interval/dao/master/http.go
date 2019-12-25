@@ -67,7 +67,7 @@ func (ms *MasterServer)handleIpRegistry(c *gin.Context) {
 		m, _ := strconv.Atoi(item)
 		switch m {
 		case conf.SEND_EMAIL:
-			if _, ok := ms.GetIplist("email")[ip]; !ok {
+			if _, ok := ms.GetIplist("email")[ip]; ok {
 				msg += conf.RegisterMsgErrorRepeat
 				code = conf.RegisterCodeError
 			} else {
@@ -78,7 +78,7 @@ func (ms *MasterServer)handleIpRegistry(c *gin.Context) {
 			msg += "email"
 			break;
 		case conf.SPIDER_EMAIL:
-			if _, ok := ms.GetIplist("spider")[ip]; !ok {
+			if _, ok := ms.GetIplist("spider")[ip]; ok {
 				msg += conf.RegisterMsgErrorRepeat
 				code = conf.RegisterCodeError
 			} else {
@@ -132,7 +132,6 @@ func (ms *MasterServer) getServeInfo(c *gin.Context) {
 			Wait_spider: d.Data.Wait_spider_queue.Q,
 			HostUrl: d.Data.Host_url,
 			SpiderTimes: d.Data.Spider_times,
-			IpList: d.Data.Ip_list.Q,
 		}
 	}
 	urls := make([]string, 0, 100)
@@ -162,7 +161,7 @@ func (ms *MasterServer) getServeInfo(c *gin.Context) {
 		_, ok := ms.SpiderDispatchs[url]
 		if !ok {
 			code = conf.SUCCESS_TASK
-			d := d.NewSpider(ms.ctx, url, false, ms)
+			d := d.NewSpider(ms.ctx, url, false, ms.spiderIpList, ms.connClients)
 			ms.SpiderDispatchs[url] = d
 			msg = conf.CreateSpiderMsgSuccess
 		} else {

@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 	"context"
+	"sort"
 	// "fmt"
 
 	pb "spider/interval/serve/grpc"
@@ -31,13 +32,14 @@ type IState struct {
 	ch						chan *ICh
 	ctx						context.Context
 	cancel					context.CancelFunc
+	ipList				    map[string]bool
+	conns					map[string]pb.TaskClient
 }
 
 type Spider struct {
 	Data					*SpiderData
 	recordData				[]*pb.SpiderRecordData
 	state					*IState
-	ms						*master.MasterServer
 	modalDb 				*utils.ModalDb
 	ipState					map[string]int
 }
@@ -60,26 +62,29 @@ type IConnC struct {
  */
 
 // 创建 spider 
-func NewSpider (ctx	context.Context, url string, sleep bool, server *MasterServer) *Spider {
+func NewSpider (ctx	context.Context, url string, sleep bool, ipList map[string]bool, conns map[string]pb.TaskClient) *Spider {
 	ctxD, cancel := context.WithCancel(ctx)
 	d := &Spider {
 		recordData: make([]*pb.SpiderRecordData, 0, 1000),
-		ms: server,
+		ipState: make(map[string]int),
 		state: &IState{
 			sleep: sleep,
-			in: make(chan *In, 0),
-			cancle: cancel,
+			ch: make(chan *ICh, 0),
+			cancel: cancel,
 			ctx: ctxD,
+			ipList: ipList,
+			conns: conns,
 		},
 	}
 
 	if !sleep {
 		host_url := getHostUrl(url)
-		d.Data = initSpiderData(host_url)
+		d.initData(host_url)
 		d.modalDb = utils.NewDb(host_url)
 		d.Data.Wait_spider_queue.Push(url)
 		d.Run()
 	}
+	return d
 }
 
 // 修饰 url 成为 db 中 唯一 key
@@ -96,7 +101,6 @@ func getHostUrl(url string) string {
 //  初始化数据
 func (d *Spider) initData(host_url  string) {
 	d.Data = &SpiderData {
-		Ip_list: modal.NewQueue(100),
 		Close_ip_list: modal.NewQueue(100),
 		Wait_spider_queue: modal.NewQueue(2000),
 		Had_spider_queue: modal.NewQueue(2000),
@@ -110,7 +114,7 @@ func (d *Spider) initData(host_url  string) {
 // Run
 func (d *Spider) Run() {
 	go d.dispatch(d.state.ctx, d.state.ch)
-	go d.HandleSend(d.state.ctx, d.state.ch)
+	go d.handleSend(d.state.ctx, d.state.ch)
 }
 
 // 退出 所有该 dispatch routine
@@ -119,57 +123,63 @@ func (d *Spider) Exit() {
 }
 
 // 分发任务
-func (d *Spider) dispatch(ctx context.Context, out chan<- *In) {
+func (d *Spider) dispatch(ctx context.Context, out chan<- *ICh) {
 	for {
 		select {
 		case <- ctx.Done():
-			utils.Log.Info(" 分发任务 goroutine exit by single, url:", d.state.Host_url)
+			utils.Log.Info(" 分发任务 goroutine exit by single, url:", d.Data.Host_url)
 			return
 		default:
 			// 正常发送流程
 			if (d.Data.Wait_spider_queue.Len() == 0) {
-				utils.Log.Info(" 分发任务 goroutine exit by spider all:", d.state.Host_url)
+				utils.Log.Info(" 分发任务 goroutine exit by spider all:", d.Data.Host_url)
 				return
 			}
 			conns := d.getConns()
-			for _, v := range conns {
-				d.Data.Spider_times ++
-				targetUrl := d.Data.Wait_spider_queue.Shift()
-				msg := &ICh{
-					req: &pb.HandleTaskReq{
-						TaskCode: conf.SPIDER_EMAIL,
-						SpiderUrl: targetUrl,
-					},
-					connC: v,
+			n := len(conns)
+			utils.Log.Info("开始分发任务， ip 数量: ", len(conns))
+			if n == 0 {
+				time.Sleep(conf.WAIT_SPIDER_TIME * time.Second)
+			} else {
+				for _, v := range conns {
+					d.Data.Spider_times ++
+					targetUrl := d.Data.Wait_spider_queue.Shift()
+					msg := &ICh{
+						req: &pb.HandleTaskReq{
+							TaskCode: conf.SPIDER_EMAIL,
+							SpiderUrl: targetUrl,
+						},
+						connC: v,
+					}
+					out <- msg
+					time.Sleep(conf.WAIT_SPIDER_TIME * time.Second) // 睡眠时间
 				}
-				out <- msg
-				time.Sleep(conf.WAIT_SPIDER_TIME * time.Second) // 睡眠时间
 			}
 		}
 	}
 }
 
 // 发送 task
-func (d *SpiderDispatch) HandleSend(ctx context.Context, in <-chan *In) {
+func (d *Spider) handleSend(ctx context.Context, in <-chan *ICh) {
 	for {
 		select {
 		case <-ctx.Done():
-			utils.Log.Info(" 发送 task goroutine exit, url:", d.state.Host_url)
+			utils.Log.Info(" 发送 task goroutine exit, url:", d.Data.Host_url)
 			return
 		case msg := <-in:
 			utils.Log.Info(" 发送 spider req, targetUrl:" + msg.req.SpiderUrl + "ip :" + msg.connC.ip)
 			resp, err := msg.connC.c.HandleTask(context.Background(), msg.req)
-			d.handleResp(msg.req.SpiderUrl, resp, err)
+			d.handleResp(msg.req.SpiderUrl, resp, err, msg.connC.ip)
 		}
 	}
 }
 
 // 处理 grpc resp
 // 将 slave 节点给的 爬取数据, 存储到内存中
-func (d *SpiderDispatch) handleResp(targetUrl string, resp *pb.HandleTaskResp, err error, ip string) {
+func (d *Spider) handleResp(targetUrl string, resp *pb.HandleTaskResp, err error, ip string) {
 	if err != nil {
 		utils.Log.Error("grpc 连接失败 ip: ", ip)
-		d.Data.Wait_spider_queue(targetUrl)
+		d.Data.Wait_spider_queue.Push(targetUrl)
 		d.ipState[ip] ++
 		return
 	}
@@ -208,9 +218,9 @@ func (d *SpiderDispatch) handleResp(targetUrl string, resp *pb.HandleTaskResp, e
 }
 
 // 获取可用句柄
-func (d *SpiderDispatch) getConns () []*IConnC {
-	allConns := d.ms.GetConnClients()
-	ip = d.ms.GetIplist("spider")
+func (d *Spider) getConns () []*IConnC {
+	allConns := d.state.conns
+	ip := d.state.ipList
 	list := make([]string, 0, len(ip))
 	conns := make([]*IConnC, 0, len(allConns))
 	for k, ok := range ip {
@@ -221,7 +231,7 @@ func (d *SpiderDispatch) getConns () []*IConnC {
 	sort.Strings(list)
 
 	for _, ip := range list {
-		if d.ipState[v.ip] > conf.Retry_Spider_Times{	// 该ip 错误过多 退出
+		if d.ipState[ip] > conf.Retry_Spider_Times{	// 该ip 错误过多 退出
 			continue
 		}
 		grpcC, ok := allConns[ip]
