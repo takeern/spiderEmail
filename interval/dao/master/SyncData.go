@@ -63,27 +63,27 @@ func (ms *MasterServer) getSyncData(status bool) *pb.HandleTaskReq {
 		},
 	}
 
-	if status {
-		all := ms.SpiderDispatch.GetAllData()
-		req.SyncData.SyncType = conf.SYNC_ALL
-		req.SyncData.SpiderSyncData = &pb.SpiderSyncData{
-			SpiderAllData: &pb.SpiderAllData{
-				IpList: all.Ip_list.Q,
-				CloseIpList: all.Close_ip_list.Q,
-				WaitSpiderQueue: all.Wait_spider_queue.Q,
-				HadSpiderQueue: all.Had_spider_queue.Q,
-				ErrorSpiderQueue: all.Error_spider_queue.Q,
-				CacheEmail: all.Cache_email,
-				HostUrl: all.Host_url,
-			},
-		}
-	} else {
-		record := ms.SpiderDispatch.GetSyncData()
-		req.SyncData.SyncType = conf.SYNC_RECORD
-		req.SyncData.SpiderSyncData = &pb.SpiderSyncData{
-			SpiderRecordData: record,
-		}
-	}
+	// if status {
+	// 	all := ms.SpiderDispatch.GetAllData()
+	// 	req.SyncData.SyncType = conf.SYNC_ALL
+	// 	req.SyncData.SpiderSyncData = &pb.SpiderSyncData{
+	// 		SpiderAllData: &pb.SpiderAllData{
+	// 			IpList: all.Ip_list.Q,
+	// 			CloseIpList: all.Close_ip_list.Q,
+	// 			WaitSpiderQueue: all.Wait_spider_queue.Q,
+	// 			HadSpiderQueue: all.Had_spider_queue.Q,
+	// 			ErrorSpiderQueue: all.Error_spider_queue.Q,
+	// 			CacheEmail: all.Cache_email,
+	// 			HostUrl: all.Host_url,
+	// 		},
+	// 	}
+	// } else {
+	// 	record := ms.SpiderDispatch.GetSyncData()
+	// 	req.SyncData.SyncType = conf.SYNC_RECORD
+	// 	req.SyncData.SpiderSyncData = &pb.SpiderSyncData{
+	// 		SpiderRecordData: record,
+	// 	}
+	// }
 
 	return req
 }

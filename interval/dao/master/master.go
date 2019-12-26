@@ -1,29 +1,28 @@
 package master
 
 import (
-	"runtime"
-	"strings"
-	"strconv"
 	"sync"
+	"context"
 	// "fmt"
 
 	"spider/interval/conf"
 	"spider/interval/modal"
-	"spider/interval/net"
 	"spider/interval/dao/utils"
+	d "spider/interval/dao/dispatch"
 	pb "spider/interval/serve/grpc"
 
-	"github.com/gin-gonic/gin"
 )
 
 type MasterServer struct {
 	mu      			sync.Mutex
 	EmailDispatch 		*EmailDispatch
-	SpiderDispatch		*SpiderDispatch
-	IpList        		map[string]bool
+	SpiderDispatchs		map[string]*d.Spider
+	spiderIpList        map[string]bool
+	emailIpList         map[string]bool
 	connClients			map[string]pb.TaskClient
 	syncList			*modal.Queue
 	status				*IStatus
+	ctx					context.Context
 }
 
 type IStatus struct {
@@ -33,34 +32,15 @@ type IStatus struct {
 	syncIdHistory		[]int64
 }
 
-type emailInfo struct {
-	WaitSpiderLen		int
-	SpiderIndex			int
-	ErrSpiderLen		int
-	SuccessSpider		[]string
-	ErrorSpider			[]string
-	IpList				[]string
-}
-
-type spiderInfo struct {
-	WaitSpiderLen		int
-	HadSpiderLen		int
-	ErroSpiderLen		int
-	HostUrl				string
-	SpiderTimes			int
-	ErroSpider			[]string
-	HadSpider			[]string
-	Wait_spider			[]string
-	IpList				[]string
-}
-
 func NewMaterServe(sleep bool) *MasterServer {
 	ms := &MasterServer{
-		IpList:        	make(map[string]bool),
+		spiderIpList:   make(map[string]bool),
+		emailIpList:    make(map[string]bool),
 		EmailDispatch: 	CreateEmailDispatch(conf.DB_URL),
-		SpiderDispatch: CreateSpiderDispatch(conf.SPIDER_URL, sleep),
 		connClients:	make(map[string]pb.TaskClient),
+		SpiderDispatchs:make(map[string]*d.Spider),
 		syncList:		modal.NewQueue(10),
+		ctx:			context.Background(),
 		status:			&IStatus{
 			starSync:	false,
 			sleep:		sleep,
@@ -75,137 +55,73 @@ func NewMaterServe(sleep bool) *MasterServer {
 	return ms
 }
 
-// 处理新ip 连接
-func (ms *MasterServer)handleIpRegistry(c *gin.Context) {
-	var code int
-	var msg string
-	var grpcC pb.TaskClient
-	ip := c.ClientIP()
-	taskcode := c.Query("accessTask")
-
-	grpcC, ok := ms.connClients[ip];
-	if !ok {
-		// 如果无法在缓存中读取 client 
-		var err error
-		grpcC, err = net.NewClient(ip)
-		if err != nil {
-			utils.Log.Error("connet to slave node failed, node ip: %s, err: %v", ip, err)
-			return
-		}
-		ms.connClients[ip] = grpcC
-	}
-
-	arr := strings.Split(taskcode, "|")
-	ms.IpList[ip] = true
-	for _, masterIp := range conf.MASTER_IP {
-		if masterIp == ip && !ms.syncList.HasValue(ip){
-			ms.syncList.Push(ip)
-		}
-	}
-
-	if len(arr) == 0 {
-		code, msg = ms.SpiderDispatch.HandleNewIpRegistry(ip, grpcC)
-		codeOther, msgOther := ms.EmailDispatch.HandleNewIpRegistry(ip, grpcC)
-		if !(code == conf.RegisterCodeSuccess && codeOther == conf.RegisterCodeSuccess) {
-			code = conf.RegisterCodeError
-			msg += msgOther
-		}
-		utils.Log.Info("create all task")
-	} else {
-		for _, item := range arr {
-			m, _ := strconv.Atoi(item)
-			switch m {
-			case conf.SEND_EMAIL:
-				utils.Log.Info("create send email task")
-				code, msg = ms.EmailDispatch.HandleNewIpRegistry(ip, grpcC)
-			break;
-			case conf.SPIDER_EMAIL:
-				utils.Log.Info("create spider email task")
-				code, msg = ms.SpiderDispatch.HandleNewIpRegistry(ip, grpcC)
-			break;
-			default:
-				utils.Log.Info("unhandle taskcode", item)
-			}
-		}
-	}
-
-	// 如果注册成功并且存在可以同步的节点，同时还未开启同步则开启同步
-	if (code == conf.RegisterCodeSuccess && ms.syncList.Len() != 0 && !ms.status.starSync) {
-		ms.StarSyncData()
-		ms.status.starSync = true
-	}
-
-	c.JSON(200, gin.H{
-		"code": code,
-		"msg": msg,
-	})
-}
-
-func (ms *MasterServer) StarServer() {
-	r := gin.Default()
-	r.GET("/register", ms.handleIpRegistry)
-	r.GET("/getServeInfo", ms.getServeInfo)
-	if ms.status.sleep {
-		r.Run(":" + conf.SLAVE_PORT)
-	} else {
-		r.Run(":" + conf.HOST_PORT)
-	}
-}
-
-func (ms *MasterServer) getServeInfo(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"code": conf.RegisterCodeSuccess,
-		"ip_list": ms.IpList,
-		"Goroutines": runtime.NumGoroutine(),
-		"emailInfo": &emailInfo{
-			IpList: ms.EmailDispatch.Ip_list.Q,
-			WaitSpiderLen: len(ms.EmailDispatch.Email_list),
-			SpiderIndex: ms.EmailDispatch.Email_send_index,
-			ErrSpiderLen: len(ms.EmailDispatch.Error_Email_list),
-			SuccessSpider: ms.EmailDispatch.Success_Email_list,
-			ErrorSpider: ms.EmailDispatch.Error_Email_list,
-		},
-		"spiderInfo": &spiderInfo{
-			WaitSpiderLen: ms.SpiderDispatch.Data.Wait_spider_queue.Len(),
-			HadSpiderLen: ms.SpiderDispatch.Data.Had_spider_queue.Len(),
-			ErroSpiderLen: ms.SpiderDispatch.Data.Error_spider_queue.Len(),
-			ErroSpider: ms.SpiderDispatch.Data.Error_spider_queue.Q,
-			HadSpider: ms.SpiderDispatch.Data.Had_spider_queue.Q,
-			Wait_spider: ms.SpiderDispatch.Data.Wait_spider_queue.Q,
-			HostUrl: ms.SpiderDispatch.Data.Host_url,
-			SpiderTimes: ms.SpiderDispatch.Data.Spider_times,
-			IpList: ms.SpiderDispatch.Data.Ip_list.Q,
-		},
-	})
-}
-
 // 睡眠状态下 主节点同步数据
 func (ms *MasterServer) HandleReq(req *pb.HandleTaskReq) *pb.HandleTaskResp{
 	resp := &pb.HandleTaskResp {
 		Code: conf.SUCCESS_TASK,
 	}
-	switch req.TaskCode {
-	case conf.SYNC_DATA:
-		if req.SyncData.SyncType == conf.SYNC_ALL {
-			// 同步所有数据, 清理所有数据
-			utils.Log.Info("sync all data")
-			ms.status.syncIdHistory = ms.status.syncIdHistory[0:0]
-			ms.status.syncIdHistory = append(ms.status.syncIdHistory, req.SyncData.SyncId)
-			ms.SpiderDispatch.InjectInitData(req.SyncData.SpiderSyncData.SpiderAllData)
-		} else if req.SyncData.SyncType == conf.SYNC_RECORD {
-			// 同步 record 数据
-			i := len(ms.status.syncIdHistory) - 1
-			if i >= 0 && ms.status.syncIdHistory[i] == req.SyncData.SyncLastId {	// 保证 顺序一致性
-				utils.Log.Info("sync record data")
-				ms.status.syncIdHistory = append(ms.status.syncIdHistory, req.SyncData.SyncId)
-				ms.SpiderDispatch.InjectRecordData(req.SyncData.SpiderSyncData.SpiderRecordData)
-			} else {
-				resp.Code = conf.ERROR_SYNCDATA_TASK
-			}
-		}
-		break;
-	default:
-		break;
-	}
+	// switch req.TaskCode {
+	// case conf.SYNC_DATA:
+	// 	if req.SyncData.SyncType == conf.SYNC_ALL {
+	// 		// 同步所有数据, 清理所有数据
+	// 		utils.Log.Info("sync all data")
+	// 		ms.status.syncIdHistory = ms.status.syncIdHistory[0:0]
+	// 		ms.status.syncIdHistory = append(ms.status.syncIdHistory, req.SyncData.SyncId)
+	// 		ms.SpiderDispatch.InjectInitData(req.SyncData.SpiderSyncData.SpiderAllData)
+	// 	} else if req.SyncData.SyncType == conf.SYNC_RECORD {
+	// 		// 同步 record 数据
+	// 		i := len(ms.status.syncIdHistory) - 1
+	// 		if i >= 0 && ms.status.syncIdHistory[i] == req.SyncData.SyncLastId {	// 保证 顺序一致性
+	// 			utils.Log.Info("sync record data")
+	// 			ms.status.syncIdHistory = append(ms.status.syncIdHistory, req.SyncData.SyncId)
+	// 			ms.SpiderDispatch.InjectRecordData(req.SyncData.SpiderSyncData.SpiderRecordData)
+	// 		} else {
+	// 			resp.Code = conf.ERROR_SYNCDATA_TASK
+	// 		}
+	// 	}
+	// 	break;
+	// default:
+	// 	break;
+	// }
 	return resp
+}
+
+// 删除某项 spider
+func (ms *MasterServer) DeleteSpider(url string) {
+	utils.Log.Info("删除某项 spider: %s", url)
+	delete(ms.SpiderDispatchs, url)
+}
+
+// 删除某项 spider
+func (ms *MasterServer) GetIplist(s string) map[string]bool {
+	if s == "email" {
+		return ms.emailIpList
+	}
+	return ms.spiderIpList
+}
+
+func (ms *MasterServer) SetIplist(s string, ip string) {
+	utils.Log.Info("添加 ip list 类型: %d, ip: ", s, ip)
+	if s == "email" {
+		ms.emailIpList[ip] = true
+	} else if s == "spider" {
+		ms.spiderIpList[ip] = true
+	}
+}
+
+// 删除某项 rpc client
+func (ms *MasterServer) DeleteConnClient(ip string) {
+	utils.Log.Info("删除某项 rpc client: %s", ip)
+	delete(ms.connClients, ip)
+}
+
+// 获取 rpc client
+func (ms *MasterServer) GetConnClients() map[string]pb.TaskClient {
+	return ms.connClients
+}
+
+// set rpc client
+func (ms *MasterServer) SetConnClients(ip string, c pb.TaskClient) {
+	utils.Log.Info("创建 新的 grpc 句柄, ip: ", ip)
+	ms.connClients[ip] = c
 }

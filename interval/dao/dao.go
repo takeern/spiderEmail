@@ -13,8 +13,8 @@ func CreateMasterServer() {
 
 func CreateSlaveServer() {
 	rpc := net.NewServer()
-	ms := master.NewMaterServe(true)
+	// ms := master.NewMaterServe(true)
 	rpc.AddListener(slave.HandleReq, conf.TYPE_SLAVE)
-	rpc.AddListener(ms.HandleReq, conf.TYPE_MASTER)
+	// rpc.AddListener(ms.HandleReq, conf.TYPE_MASTER)
 	rpc.Listen()
 }

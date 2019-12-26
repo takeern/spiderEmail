@@ -18,13 +18,19 @@ var MASTER_IP = [...]string{
 }
 
 const DB_URL = "http://wwwijetchorg/"
-const SPIDER_URL = "http://dpi-proceedings.com/"
+const SPIDER_URL = "http://www.ivypub.org/index.shtml"   // http://www.jissr.net/src/assets/pdf/2019-6-11_1.pdf  http://www.ivypub.org/ERF/download/54421.shtml
 
 const (
 	RegisterCodeSuccess = 0
 	RegisterMsgSuccess = " register Success "
+	CreateSpiderMsgSuccess = " create Spider Success "
+	DeleteSpiderMsgSuccess = " delete Spider Success "
 	RegisterCodeError = -1
 	RegisterMsgErrorRepeat = " this ip Repeat registered "
+	CreateSpiderURLError = " create spider task error "
+	CreateSpiderURLRepeat = " create spider url Repeat "
+	DeleteSpiderURLError = " delete spider task error no such url"
+	GetSpiderInfoError = " can not find this url "
 )
 
 const (

@@ -10,6 +10,7 @@ import (
 	"spider/interval/conf"
 	"code.sajari.com/docconv"
 	"strings"
+	"bytes"
 )
 
 var (
@@ -31,22 +32,23 @@ func SpiderEmail(url string, times int) (error, []string, []string) {
 	if (times > conf.HTTP_TRY_REQUEST_TIMES) {
 		return errors.New("too many try"), emails, urls
 	}
-	res, err := client.Get(url)
+	res, err := http.Get(url)
 	if err != nil {
 		times ++
 		return SpiderEmail(url, times)
 	} else {
 		defer res.Body.Close()
-		isPDF, _ := regexp.MatchString(`pdf`, res.Header["Content-Type"][0])
-		if isPDF {
-			html, _, _ = docconv.ConvertPDF(res.Body)
-		} else {
-			Body, _ := ioutil.ReadAll(res.Body)
-			html = string(Body)
-		}
 	}
 
-	emails = drawEmail(html)
+
+	
+	Body, _ := ioutil.ReadAll(res.Body)
+	html = string(Body)
+	reader := bytes.NewReader(Body)
+	pdf, _, _ := docconv.ConvertPDF(reader)
+	pdfEmails := drawEmail(pdf)
+	emails = append(drawEmail(html), pdfEmails...)
+
 	re := regexp.MustCompile(`(http|https):\/\/?([^/]*)`)
 	host_url := string(re.Find([]byte(url)))
 	urls = drawUrl(html, host_url)
@@ -101,7 +103,7 @@ func editUlr(url string, host_url string) (string) {
 			if strings.HasPrefix(url, "/") {
 				return host_url + url
 			} else {
-				return host_url + '/' + url
+				return host_url + "/" + url
 			}
 		}
 	}
