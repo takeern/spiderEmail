@@ -27,6 +27,7 @@ const (
 	DeleteSpiderMsgSuccess = " delete Spider Success "
 	RegisterCodeError = -1
 	RegisterMsgErrorRepeat = " this ip Repeat registered "
+	RegisterMsgErrorNoInput = " input is not enough "
 	CreateSpiderURLError = " create spider task error "
 	CreateSpiderURLRepeat = " create spider url Repeat "
 	DeleteSpiderURLError = " delete spider task error no such url"

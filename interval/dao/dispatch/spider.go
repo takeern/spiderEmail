@@ -131,10 +131,6 @@ func (d *Spider) dispatch(ctx context.Context, out chan<- *ICh) {
 			return
 		default:
 			// 正常发送流程
-			if (d.Data.Wait_spider_queue.Len() == 0) {
-				utils.Log.Info(" 分发任务 goroutine exit by spider all:", d.Data.Host_url)
-				return
-			}
 			conns := d.getConns()
 			n := len(conns)
 			utils.Log.Info("开始分发任务， ip 数量: ", len(conns))
@@ -142,6 +138,10 @@ func (d *Spider) dispatch(ctx context.Context, out chan<- *ICh) {
 				time.Sleep(conf.WAIT_SPIDER_TIME * time.Second)
 			} else {
 				for _, v := range conns {
+					if (d.Data.Wait_spider_queue.Len() == 0) {
+						utils.Log.Info(" 分发任务 goroutine exit by spider all:", d.Data.Host_url)
+						return
+					}
 					d.Data.Spider_times ++
 					targetUrl := d.Data.Wait_spider_queue.Shift()
 					msg := &ICh{
@@ -231,6 +231,7 @@ func (d *Spider) getConns () []*IConnC {
 	sort.Strings(list)
 
 	for _, ip := range list {
+		utils.Log.Info("ip: " + ip + " 状态: ", d.ipState[ip])
 		if d.ipState[ip] > conf.Retry_Spider_Times{	// 该ip 错误过多 退出
 			continue
 		}

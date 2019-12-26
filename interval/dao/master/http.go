@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"strings"
 	"strconv"
-	// "fmt"
+	"fmt"
 
 	"spider/interval/conf"
 	"spider/interval/net"
@@ -38,66 +38,9 @@ type spiderInfo struct {
 
 // 处理新ip 连接
 func (ms *MasterServer)handleIpRegistry(c *gin.Context) {
-	var code int
-	var msg string
-	var grpcC pb.TaskClient
 	ip := c.ClientIP()
 	taskcode := c.Query("accessTask")
-	connc := ms.GetConnClients()
-	grpcC, ok := connc[ip]
-	if !ok {
-		// 如果无法在缓存中读取 client 
-		var err error
-		grpcC, err = net.NewClient(ip)
-		if err != nil {
-			utils.Log.Error("connet to slave node failed, node ip: %s, err: %v", ip, err)
-			return
-		}
-		ms.SetConnClients(ip, grpcC)
-	}
-
-	arr := strings.Split(taskcode, "|")
-	for _, masterIp := range conf.MASTER_IP {	// 判断该ip 是否开启同步
-		if masterIp == ip && !ms.syncList.HasValue(ip){
-			ms.syncList.Push(ip)
-		}
-	}
-
-	for _, item := range arr {
-		m, _ := strconv.Atoi(item)
-		switch m {
-		case conf.SEND_EMAIL:
-			if _, ok := ms.GetIplist("email")[ip]; ok {
-				msg += conf.RegisterMsgErrorRepeat
-				code = conf.RegisterCodeError
-			} else {
-				ms.SetIplist("email", ip)
-				msg += conf.RegisterMsgSuccess
-				code = conf.RegisterCodeSuccess
-			}
-			msg += "email"
-			break;
-		case conf.SPIDER_EMAIL:
-			if _, ok := ms.GetIplist("spider")[ip]; ok {
-				msg += conf.RegisterMsgErrorRepeat
-				code = conf.RegisterCodeError
-			} else {
-				ms.SetIplist("spider", ip)
-				msg += conf.RegisterMsgSuccess
-				code = conf.RegisterCodeSuccess
-			}
-			msg += "spider"
-			break;
-		default:
-			utils.Log.Info("unhandle taskcode", item)
-		}
-	}
-
-	// 如果注册成功并且存在可以同步的节点，同时还未开启同步则开启同步
-	if (code == conf.RegisterCodeSuccess && ms.syncList.Len() != 0 && !ms.status.starSync) {
-		ms.StarSyncData()
-		ms.status.starSync = true
-	}
+	code, msg := ms.register(ip, taskcode)
 
 	c.JSON(200, gin.H{
 		"code": code,
@@ -109,6 +52,7 @@ func (ms *MasterServer) StarServer() {
 	r := gin.Default()
 	r.GET("/register", ms.handleIpRegistry)
 	r.GET("/getServeInfo", ms.getServeInfo)
+	r.GET("/setSlaveIp", ms.hanleSetSlaveIp)
 	r.GET("/createSpider", ms.handleCreateSpider)
 	r.GET("/deleteSpider", ms.handleDeleteSpider)
 	if ms.status.sleep {
@@ -198,4 +142,83 @@ func (ms *MasterServer) handleDeleteSpider(c *gin.Context) {
 		"code": code,
 		"msg": msg,
 	})
+}
+
+func (ms *MasterServer) hanleSetSlaveIp(c *gin.Context) {
+	ip := c.Query("ip")
+	taskcode := c.Query("accessTask")
+	var code int
+	var msg string
+	if len(ip) == 0 || len(taskcode) == 0 {
+		code = conf.RegisterCodeError
+		msg = conf.RegisterMsgErrorNoInput
+	} else {
+		code, msg = ms.register(ip, taskcode)
+	}
+
+	c.JSON(200, gin.H{
+		"code": code,
+		"msg": msg,
+	})
+}
+
+func (ms *MasterServer)register(ip string, taskcode string) (code int, msg string){
+	var grpcC pb.TaskClient
+	connc := ms.GetConnClients()
+	grpcC, ok := connc[ip]
+	if !ok {
+		// 如果无法在缓存中读取 client 
+		var err error
+		grpcC, err = net.NewClient(ip)
+		if err != nil {
+			utils.Log.Error("connet to slave node failed, node ip: %s, err: %v", ip, err)
+			return
+		}
+		ms.SetConnClients(ip, grpcC)
+	}
+
+	arr := strings.Split(taskcode, "|")
+	for _, masterIp := range conf.MASTER_IP {	// 判断该ip 是否开启同步
+		if masterIp == ip && !ms.syncList.HasValue(ip){
+			ms.syncList.Push(ip)
+		}
+	}
+	fmt.Println(arr)
+
+	for _, item := range arr {
+		m, _ := strconv.Atoi(item)
+		switch m {
+		case conf.SEND_EMAIL:
+			if _, ok := ms.GetIplist("email")[ip]; ok {
+				msg += conf.RegisterMsgErrorRepeat
+				code = conf.RegisterCodeError
+			} else {
+				ms.SetIplist("email", ip)
+				msg += conf.RegisterMsgSuccess
+				code = conf.RegisterCodeSuccess
+			}
+			msg += "email"
+			break;
+		case conf.SPIDER_EMAIL:
+			if _, ok := ms.GetIplist("spider")[ip]; ok {
+				msg += conf.RegisterMsgErrorRepeat
+				code = conf.RegisterCodeError
+			} else {
+				ms.SetIplist("spider", ip)
+				msg += conf.RegisterMsgSuccess
+				code = conf.RegisterCodeSuccess
+			}
+			msg += "spider"
+			break;
+		default:
+			utils.Log.Info("unhandle taskcode", item)
+		}
+	}
+
+	// 如果注册成功并且存在可以同步的节点，同时还未开启同步则开启同步
+	if (code == conf.RegisterCodeSuccess && ms.syncList.Len() != 0 && !ms.status.starSync) {
+		ms.StarSyncData()
+		ms.status.starSync = true
+	}
+	return code, msg
 }
