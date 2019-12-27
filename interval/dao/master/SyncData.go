@@ -16,12 +16,12 @@ func (ms *MasterServer) StarSyncData() {
 			ms.mu.Lock()
 			// 将 sync ip 同步数据
 			if (ms.syncList.Len() != 0) {
-				firstSend := true
+				useRecord := false
 				if ms.status.syncId != 0 {
-					firstSend = false
+					useRecord = true
 				}
-				req := ms.getSyncData(firstSend)
-
+				req := ms.getAllSyncData(useRecord)
+				utils.Log.Info("sync send Data")
 				for _, masterIp := range ms.syncList.Q {
 					c, ok := ms.connClients[masterIp]
 					if ok {
@@ -30,7 +30,7 @@ func (ms *MasterServer) StarSyncData() {
 							utils.Log.Error("grpc: sync data error ", err)
 						} else if resp.Code != 10000 {
 							utils.Log.Info("grpc: sync data get init data", err)
-							initReq := ms.getSyncData(true)
+							initReq := ms.getAllSyncData(true)
 							c.HandleTask(context.Background(), initReq)
 						}
 					}
@@ -44,10 +44,12 @@ func (ms *MasterServer) StarSyncData() {
 	}()
 }
 
-// 获取 需要同步的数据
-// true 同步所有数据
-// false 同步变化数据
-func (ms *MasterServer) getSyncData(status bool) *pb.HandleTaskReq {
+/*
+ * 同步所有数据
+ * true 状态下仅同步本次时间段内 变化
+ * false 情况下 获取所有需要的数据
+ */
+func (ms *MasterServer) getAllSyncData(record bool) *pb.HandleTaskReq {
 	var syncLastId int64
 	if ms.status.syncId == 0 {
 		syncLastId = 0
@@ -60,30 +62,20 @@ func (ms *MasterServer) getSyncData(status bool) *pb.HandleTaskReq {
 		SyncData: &pb.SyncData{
 			SyncId: ms.status.syncId,
 			SyncLastId: syncLastId,
+			MasterSyncData: &pb.MasterSyncData {
+				IpList: ms.getSyncData(record),
+			},
+			SpiderSyncData: make(map[string]*pb.SpiderSyncData),
 		},
 	}
-
-	// if status {
-	// 	all := ms.SpiderDispatch.GetAllData()
-	// 	req.SyncData.SyncType = conf.SYNC_ALL
-	// 	req.SyncData.SpiderSyncData = &pb.SpiderSyncData{
-	// 		SpiderAllData: &pb.SpiderAllData{
-	// 			IpList: all.Ip_list.Q,
-	// 			CloseIpList: all.Close_ip_list.Q,
-	// 			WaitSpiderQueue: all.Wait_spider_queue.Q,
-	// 			HadSpiderQueue: all.Had_spider_queue.Q,
-	// 			ErrorSpiderQueue: all.Error_spider_queue.Q,
-	// 			CacheEmail: all.Cache_email,
-	// 			HostUrl: all.Host_url,
-	// 		},
-	// 	}
-	// } else {
-	// 	record := ms.SpiderDispatch.GetSyncData()
-	// 	req.SyncData.SyncType = conf.SYNC_RECORD
-	// 	req.SyncData.SpiderSyncData = &pb.SpiderSyncData{
-	// 		SpiderRecordData: record,
-	// 	}
-	// }
+	for k, v := range ms.SpiderDispatchs {
+		req.SyncData.SpiderSyncData[k] = v.GetSyncData(record)
+	}
+	if !record {
+		req.SyncData.SyncType = conf.SYNC_ALL
+	} else {
+		req.SyncData.SyncType = conf.SYNC_RECORD
+	}
 
 	return req
 }

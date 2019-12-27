@@ -33,11 +33,16 @@ message SpiderInfo {
 }
 
 message SyncData {
-    SpiderSyncData SpiderSyncData = 1;
-    EmailSyncData EmailSyncData = 2;
-    int64 SyncId = 3;
-    int64 SyncLastId = 4;
-    int32 SyncType = 5;
+    MasterSyncData MasterSyncData = 1;
+    map<string, SpiderSyncData> SpiderSyncData = 2;
+    // EmailSyncData EmailSyncData = 3;
+    int64 SyncId = 4;
+    int64 SyncLastId = 5;
+    int32 SyncType = 6;
+}
+
+message MasterSyncData {
+    map<string, string> IpList = 1;
 }
 
 message SpiderSyncData {
@@ -46,8 +51,6 @@ message SpiderSyncData {
 }
 
 message SpiderAllData {
-    repeated string IpList = 1;
-    repeated string CloseIpList = 2;
     repeated string WaitSpiderQueue = 3;
     repeated string HadSpiderQueue = 4;
     repeated string ErrorSpiderQueue = 5;
@@ -58,23 +61,24 @@ message SpiderAllData {
 message SpiderRecordData {
     string TargetUrl = 1;
     HandleTaskResp Resp = 2;
+    string Ip = 3;
 }
 
 
 
-message EmailSyncData {
-    EmailAllData EmailAllData = 1;
-    repeated EmailRecordData EmailRecordData = 2;
-}
+// message EmailSyncData {
+//     EmailAllData EmailAllData = 1;
+//     repeated EmailRecordData EmailRecordData = 2;
+// }
 
-message EmailAllData {
-    repeated string IpList = 1;
-    repeated string EmailList = 2;
-    repeated string SuccessEmailList = 3;
-    repeated string EmailSendIndex = 4;
-}
+// message EmailAllData {
+//     repeated string IpList = 1;
+//     repeated string EmailList = 2;
+//     repeated string SuccessEmailList = 3;
+//     repeated string EmailSendIndex = 4;
+// }
 
-message EmailRecordData {
-    string TargetEmail = 1;
-    HandleTaskResp Resp = 2;
-}
+// message EmailRecordData {
+//     string TargetEmail = 1;
+//     HandleTaskResp Resp = 2;
+// }

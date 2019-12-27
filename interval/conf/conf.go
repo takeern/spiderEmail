@@ -6,7 +6,7 @@ type SendInfo struct {
 	Host	string
 }
 
-const WAIT_SPIDER_TIME = 30
+const WAIT_SPIDER_TIME = 45
 const SPIDER_TIMEOUT = 15 
 const HTTP_TRY_REQUEST_TIMES = 2
 const RETRY_REGISTER_TIMES = 10
@@ -14,7 +14,7 @@ const RETRY_REGISTER_TIMES = 10
 var MASTER_IP = [...]string{
 	// "144.202.19.110",
 	// "47.103.12.134",
-	// "127.0.0.1",
+	"127.0.0.1",
 }
 
 const DB_URL = "http://wwwijetchorg/"
@@ -72,4 +72,10 @@ const (
 	ERROR_UNAHDNLE_TASK = 10004
 	ERROR_MASTER_TASK	= 10005
 	ERROR_SLAVE_TASK	= 10006
+)
+
+const (
+	IP_SPIDER = "SPIDER"
+	IP_EMAIL = "EMAIL"
+	IP_ALL = "ALL"
 )

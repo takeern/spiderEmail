@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"strings"
 	"strconv"
-	"fmt"
+	// "fmt"
 
 	"spider/interval/conf"
 	"spider/interval/net"
@@ -183,7 +183,6 @@ func (ms *MasterServer)register(ip string, taskcode string) (code int, msg strin
 			ms.syncList.Push(ip)
 		}
 	}
-	fmt.Println(arr)
 
 	for _, item := range arr {
 		m, _ := strconv.Atoi(item)
