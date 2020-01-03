@@ -4,6 +4,8 @@ import (
 	"runtime"
 	"strings"
 	"strconv"
+	"context"
+	"time"
 	// "fmt"
 
 	"spider/interval/conf"
@@ -61,6 +63,19 @@ func (ms *MasterServer) StarServer() {
 		r.Run(":" + conf.SLAVE_PORT)
 	} else {
 		r.Run(":" + conf.HOST_PORT)
+	}
+}
+
+func (ms *MasterServer) intervalMemory(ctx context.Context) {
+	for {
+		select {
+		case <- ctx.Done():
+			utils.Log.Info(" intervalMemory exit")
+			return
+		default:
+			time.Sleep(conf.INTERVAL_MEMORY * time.Hour)
+			ms.setSnapchat()
+		}
 	}
 }
 

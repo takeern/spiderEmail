@@ -10,6 +10,7 @@ const WAIT_SPIDER_TIME = 30
 const SPIDER_TIMEOUT = 15 
 const HTTP_TRY_REQUEST_TIMES = 2
 const RETRY_REGISTER_TIMES = 10
+const INTERVAL_MEMORY = 12 // 定时存档（小时）
 
 var MASTER_IP = [...]string{
 	// "144.202.19.110",
