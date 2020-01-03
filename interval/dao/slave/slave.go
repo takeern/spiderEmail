@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 	"spider/interval/conf"
-	"spider/interval/dao/utils"
+	// "spider/interval/dao/utils"
 
 	pb "spider/interval/serve/grpc"
 )
@@ -74,21 +74,24 @@ func HandleReq(req *pb.HandleTaskReq) (*pb.HandleTaskResp) {
 			resp.SpiderInfo.Urls = urls
 		}
 		break
-	case conf.SYNC_DATA:
-		utils.Log.Info("sync get data", req)
-		switch req.SyncData.SyncType {
-			case conf.SYNC_ALL:
-				break;
-			case conf.SYNC_RECORD:
-				log.Println("req.SyncData.SpiderSyncData 长度", len(req.SyncData.SpiderSyncData.SpiderRecordData))
-				for _, v := range req.SyncData.SpiderSyncData.SpiderRecordData {
-					log.Println("v: ", v)
-				}
-				break;
-			default:
-				break;
-		}
-		break;
+	// case conf.SYNC_DATA:
+	// 	utils.Log.Info("sync get data", req)
+	// 	switch req.SyncData.SyncType {
+	// 		case conf.SYNC_ALL:
+	// 			log.Println("v: ", req.SyncData)
+	// 			break;
+	// 		case conf.SYNC_RECORD:
+	// 			// log.Println("req.SyncData.SpiderSyncData 长度", len(req.SyncData.SpiderSyncData.SpiderRecordData))
+	// 			for url, v := range req.SyncData.SpiderSyncData {
+	// 				for _, d := range v.SpiderRecordData {
+	// 					log.Println(url + " : ", d)
+	// 				}
+	// 			}
+	// 			break;
+	// 		default:
+	// 			break;
+	// 	}
+	// 	break;
 	default:
 		resp.Code = conf.ERROR_UNAHDNLE_TASK
 		resp.ErrorMsg = "unhandle task code"

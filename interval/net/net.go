@@ -67,7 +67,6 @@ func (rpc *RpcServe) HandleTask(ctx context.Context, req *pb.HandleTaskReq) (*pb
 
 	if	req.TaskCode > conf.TASK_BOUNDARY {
 		// handle master task
-
 		if rpc.masterHandle != nil {
 			resp = rpc.masterHandle(req)
 		} else {

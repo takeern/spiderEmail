@@ -16,7 +16,6 @@ import (
 )
 
 type SpiderData struct {
-	Close_ip_list			*modal.Queue
 	Wait_spider_queue 		*modal.Queue
 	Had_spider_queue 		*modal.Queue
 	retry_spider_queue 		*modal.Queue
@@ -24,7 +23,6 @@ type SpiderData struct {
 	Cache_email 			map[string]string
 	Host_url 				string
 	Spider_times 			int
-	errorTimes				int
 }
 
 type IState struct {
@@ -101,13 +99,11 @@ func getHostUrl(url string) string {
 //  初始化数据
 func (d *Spider) initData(host_url  string) {
 	d.Data = &SpiderData {
-		Close_ip_list: modal.NewQueue(100),
 		Wait_spider_queue: modal.NewQueue(2000),
 		Had_spider_queue: modal.NewQueue(2000),
 		Error_spider_queue: modal.NewQueue(2000),
 		Host_url: host_url,
 		Cache_email: make(map[string]string),
-		errorTimes: 0,
 	}
 }
 
@@ -152,7 +148,7 @@ func (d *Spider) dispatch(ctx context.Context, out chan<- *ICh) {
 						connC: v,
 					}
 					out <- msg
-					time.Sleep(conf.WAIT_SPIDER_TIME * time.Second) // 睡眠时间
+					time.Sleep(time.Duration(conf.WAIT_SPIDER_TIME / n) * time.Second) // 睡眠时间
 				}
 			}
 		}
@@ -169,6 +165,11 @@ func (d *Spider) handleSend(ctx context.Context, in <-chan *ICh) {
 		case msg := <-in:
 			utils.Log.Info(" 发送 spider req, targetUrl:" + msg.req.SpiderUrl + "ip :" + msg.connC.ip)
 			resp, err := msg.connC.c.HandleTask(context.Background(), msg.req)
+			d.recordData = append(d.recordData, &pb.SpiderRecordData{
+				TargetUrl: msg.req.SpiderUrl,
+				Resp: resp,
+				Ip: msg.connC.ip,
+			})
 			d.handleResp(msg.req.SpiderUrl, resp, err, msg.connC.ip)
 		}
 	}
@@ -247,4 +248,46 @@ func (d *Spider) getConns () []*IConnC {
 	}
 
 	return conns
+}
+
+/*
+ * 同步spider dispatch数据
+ * true 状态下仅同步本次时间段内 变化
+ * false 情况下 获取所有需要的数据
+ */
+func (d *Spider) GetSyncData(record bool) (*pb.SpiderSyncData){
+	r := &pb.SpiderSyncData{}
+	if record {
+		r.SpiderRecordData = make([]*pb.SpiderRecordData, 1, 1000)
+		copy(r.SpiderRecordData, d.recordData)
+		d.recordData = d.recordData[0:0]
+	} else {
+		r.SpiderAllData = &pb.SpiderAllData {
+			WaitSpiderQueue: d.Data.Wait_spider_queue.Q,
+			HadSpiderQueue: d.Data.Had_spider_queue.Q,
+			ErrorSpiderQueue: d.Data.Error_spider_queue.Q,
+			CacheEmail: d.Data.Cache_email,
+			HostUrl: d.Data.Host_url,
+		}
+	}
+	return r
+}
+
+/*
+ * 注入初始化的数据
+ */
+func (d *Spider) InjectInitData(data *pb.SpiderAllData) {
+	d.initData(data.HostUrl)
+	d.Data.Cache_email = data.CacheEmail
+	d.Data.Wait_spider_queue.PushList(data.WaitSpiderQueue)
+	d.Data.Had_spider_queue.PushList(data.HadSpiderQueue)
+	d.Data.Error_spider_queue.PushList(data.ErrorSpiderQueue)
+}
+
+// 注入每次记录的数据
+func (d *Spider) InjectRecordData(records []*pb.SpiderRecordData)  {
+	for _, item := range records {
+		d.handleResp(item.TargetUrl, item.Resp, nil, item.Ip)
+		d.Data.Wait_spider_queue.Shift()
+	}
 }
