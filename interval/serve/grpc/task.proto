@@ -43,6 +43,7 @@ message SyncData {
 
 message MasterSyncData {
     map<string, string> IpList = 1;
+    repeated string SpiderUrls = 2;
 }
 
 message SpiderSyncData {

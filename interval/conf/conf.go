@@ -6,7 +6,7 @@ type SendInfo struct {
 	Host	string
 }
 
-const WAIT_SPIDER_TIME = 45
+const WAIT_SPIDER_TIME = 30
 const SPIDER_TIMEOUT = 15 
 const HTTP_TRY_REQUEST_TIMES = 2
 const RETRY_REGISTER_TIMES = 10
@@ -14,7 +14,7 @@ const RETRY_REGISTER_TIMES = 10
 var MASTER_IP = [...]string{
 	// "144.202.19.110",
 	// "47.103.12.134",
-	"127.0.0.1",
+	// "127.0.0.1",
 }
 
 const DB_URL = "http://wwwijetchorg/"
@@ -38,7 +38,7 @@ const (
 	Retry_Spider_Times = 20
 	Retry_Send_Email_Times = 10
 	WAIT_SEND_EMAIL_TIME = 60 * 60 * 3 // 60 * 50
-	WAIT_SYNC_DATA = 60 * 3 
+	WAIT_SYNC_DATA = 40 
 )
 
 // slave 任务
@@ -75,7 +75,16 @@ const (
 )
 
 const (
+	ERROR_REP 			= -1
+)
+
+const (
 	IP_SPIDER = "SPIDER"
 	IP_EMAIL = "EMAIL"
 	IP_ALL = "ALL"
+)
+
+const (
+	SNAPCHAT_ERROR = "snapchat error"
+	SNAPCHAT_SUCCESS = "snapchat use success"
 )

@@ -272,3 +272,22 @@ func (d *Spider) GetSyncData(record bool) (*pb.SpiderSyncData){
 	}
 	return r
 }
+
+/*
+ * 注入初始化的数据
+ */
+func (d *Spider) InjectInitData(data *pb.SpiderAllData) {
+	d.initData(data.HostUrl)
+	d.Data.Cache_email = data.CacheEmail
+	d.Data.Wait_spider_queue.PushList(data.WaitSpiderQueue)
+	d.Data.Had_spider_queue.PushList(data.HadSpiderQueue)
+	d.Data.Error_spider_queue.PushList(data.ErrorSpiderQueue)
+}
+
+// 注入每次记录的数据
+func (d *Spider) InjectRecordData(records []*pb.SpiderRecordData)  {
+	for _, item := range records {
+		d.handleResp(item.TargetUrl, item.Resp, nil, item.Ip)
+		d.Data.Wait_spider_queue.Shift()
+	}
+}

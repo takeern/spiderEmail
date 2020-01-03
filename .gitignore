@@ -3,3 +3,4 @@ ps.go
 spider
 .idea
 go.sum
+*.snapchat

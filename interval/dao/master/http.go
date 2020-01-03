@@ -10,7 +10,6 @@ import (
 	"spider/interval/net"
 	"spider/interval/dao/utils"
 	pb "spider/interval/serve/grpc"
-	d "spider/interval/dao/dispatch"
 
 	"github.com/gin-gonic/gin"
 )
@@ -55,6 +54,9 @@ func (ms *MasterServer) StarServer() {
 	r.GET("/setSlaveIp", ms.hanleSetSlaveIp)
 	r.GET("/createSpider", ms.handleCreateSpider)
 	r.GET("/deleteSpider", ms.handleDeleteSpider)
+	r.GET("/setSnapchat", ms.handleSetSnapchat)
+	r.GET("/getSnapchat", ms.handleGetSnapchat)
+	r.GET("/useSnapchat", ms.handleUseSnapchat)
 	if ms.status.sleep {
 		r.Run(":" + conf.SLAVE_PORT)
 	} else {
@@ -98,20 +100,7 @@ func (ms *MasterServer) getServeInfo(c *gin.Context) {
  */
  func (ms *MasterServer) handleCreateSpider(c *gin.Context) {
 	url := c.Query("url")
-	code := conf.ERROR_SPIDER_TASK
-	msg := conf.CreateSpiderURLError;
-	utils.Log.Info("处理 创建新的 爬虫任务: %s", url)
-	if url != "" {
-		_, ok := ms.SpiderDispatchs[url]
-		if !ok {
-			code = conf.SUCCESS_TASK
-			d := d.NewSpider(ms.ctx, url, false, ms.spiderIpList, ms.connClients)
-			ms.SpiderDispatchs[url] = d
-			msg = conf.CreateSpiderMsgSuccess
-		} else {
-			msg = conf.CreateSpiderURLRepeat
-		}
-	}
+	code, msg := ms.creatSpider(url)
 
 	c.JSON(200, gin.H{
 		"code": code,
@@ -220,4 +209,28 @@ func (ms *MasterServer)register(ip string, taskcode string) (code int, msg strin
 		ms.status.starSync = true
 	}
 	return code, msg
+}
+
+// 物理方式（snapchat）存储 当前服务状态
+func (ms *MasterServer) handleSetSnapchat(c *gin.Context) {
+	ms.setSnapchat()
+}
+
+// 获取当前所有 snapchat
+func (ms *MasterServer) handleGetSnapchat(c *gin.Context) {
+	names := ms.getSnapchat()
+	c.JSON(200, gin.H{
+		"code": conf.SUCCESS_TASK,
+		"data": names,
+	})
+}
+
+// 使用 snapchat
+func (ms *MasterServer) handleUseSnapchat(c *gin.Context) {
+	name := c.Query("name")
+	code, msg := ms.useSnapchat(name)
+	c.JSON(200, gin.H{
+		"code": code,
+		"msg": msg,
+	})
 }
