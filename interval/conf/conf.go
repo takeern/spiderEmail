@@ -38,7 +38,7 @@ const (
 	Retry_Spider_Times = 20
 	Retry_Send_Email_Times = 10
 	WAIT_SEND_EMAIL_TIME = 60 * 60 * 3 // 60 * 50
-	WAIT_SYNC_DATA = 60 * 3 
+	WAIT_SYNC_DATA = 40 
 )
 
 // slave 任务
@@ -72,4 +72,19 @@ const (
 	ERROR_UNAHDNLE_TASK = 10004
 	ERROR_MASTER_TASK	= 10005
 	ERROR_SLAVE_TASK	= 10006
+)
+
+const (
+	ERROR_REP 			= -1
+)
+
+const (
+	IP_SPIDER = "SPIDER"
+	IP_EMAIL = "EMAIL"
+	IP_ALL = "ALL"
+)
+
+const (
+	SNAPCHAT_ERROR = "snapchat error"
+	SNAPCHAT_SUCCESS = "snapchat use success"
 )
