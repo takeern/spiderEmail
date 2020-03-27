@@ -50,8 +50,13 @@ func SpiderEmail(url string, times int) (error, []string, []string) {
 	emails = append(drawEmail(html), pdfEmails...)
 
 	re := regexp.MustCompile(`(http|https):\/\/?([^/]*)`)
+	rePath := regexp.MustCompile(`(.*)\/`)
+	path_url := string(rePath.Find([]byte(url)))
 	host_url := string(re.Find([]byte(url)))
-	urls = drawUrl(html, host_url)
+	if len(path_url) < len(host_url) {
+		path_url = host_url
+	}
+	urls = drawUrl(html, host_url, path_url)
 	return err, emails, urls
 }
 
@@ -67,21 +72,21 @@ func drawEmail(html string) []string {
 }
 
 // 提取页面url
-func drawUrl(html string, host_url string) []string {
+func drawUrl(html string, host_url string, path_url string) []string {
 	reScrpit := regexp.MustCompile(`<script[^>]*?>(?:.|\n)*?<\/script>`)
 	html = string(reScrpit.ReplaceAll([]byte(html), []byte("")))
 	re := regexp.MustCompile(`<a[^>]*href[=\"\'\s]+([^\"\']*)[\"\']?[^>]*>`)
 	params := re.FindAllSubmatch([]byte(html), -1)
 	urls := make([]string, 0, 100)
 	for _, param := range params {
-		url := editUlr(string(param[1]), host_url)
+		url := editUlr(string(param[1]), host_url, path_url)
 		urls = append(urls, url)
 	}
 	return urls
 }
 
 // 检查 url 合法性
-func editUlr(url string, host_url string) (string) {
+func editUlr(url string, host_url string, path_url string) (string) {
 	isAbsoluteUrl, ok := regexp.MatchString(`(http|https):\/\/`, url)
 	if ok != nil {
 		return ""
@@ -103,7 +108,10 @@ func editUlr(url string, host_url string) (string) {
 			if strings.HasPrefix(url, "/") {
 				return host_url + url
 			} else {
-				return host_url + "/" + url
+				if !strings.HasSuffix(path_url, "/") {
+					path_url = path_url + "/"
+				}
+				return path_url + url
 			}
 		}
 	}
