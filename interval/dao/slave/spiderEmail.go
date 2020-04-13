@@ -56,6 +56,10 @@ func SpiderEmail(url string, times int) (error, []string, []string) {
 	if len(path_url) < len(host_url) {
 		path_url = host_url
 	}
+
+	if !strings.HasSuffix(path_url, "/") {
+		path_url = path_url + "/"
+	}
 	urls = drawUrl(html, host_url, path_url)
 	return err, emails, urls
 }
@@ -107,10 +111,14 @@ func editUlr(url string, host_url string, path_url string) (string) {
 		} else {
 			if strings.HasPrefix(url, "/") {
 				return host_url + url
-			} else {
-				if !strings.HasSuffix(path_url, "/") {
-					path_url = path_url + "/"
+			} else if strings.HasPrefix(url, "../") {
+				re := regexp.MustCompile(`(.*\/)`)
+				s := string(re.Find([]byte(path_url)))
+				if len(s) < len(host_url) {
+					s = host_url
 				}
+				return s + url
+			} else {
 				return path_url + url
 			}
 		}
